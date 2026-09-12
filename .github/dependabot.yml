@@ -1,0 +1,14 @@
+# Keeps every SHA-pinned action reference on its latest release.
+#   "/"          -> .github/workflows/*.yml (this repo's own CI and reusable workflows)
+#   "/actions/*" -> actions/<name>/action.yml (the wrapper actions distributed from here)
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/actions/*"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

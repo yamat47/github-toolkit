@@ -1,0 +1,104 @@
+name: Checkout
+description: >-
+  Thin wrapper around actions/checkout pinned to a full commit SHA. Consumers
+  reference this repository once and receive upstream updates whenever the pin
+  here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror actions/checkout v7 exactly (names, defaults, descriptions
+# abridged). See https://github.com/actions/checkout for full documentation.
+inputs:
+  repository:
+    description: Repository name with owner. For example, actions/checkout
+    default: ${{ github.repository }}
+  ref:
+    description: The branch, tag or SHA to checkout. Defaults to the ref/SHA of the triggering event.
+  token:
+    description: Token used to fetch the repository. Defaults to GITHUB_TOKEN.
+    default: ${{ github.token }}
+  ssh-key:
+    description: SSH key used to fetch the repository.
+  ssh-known-hosts:
+    description: Known hosts in addition to the user and global host key database.
+  ssh-strict:
+    description: Whether to perform strict host key checking.
+    default: "true"
+  ssh-user:
+    description: The user to use when connecting to the remote SSH host.
+    default: git
+  persist-credentials:
+    description: Whether to configure the token or SSH key with the local git config.
+    default: "true"
+  path:
+    description: Relative path under $GITHUB_WORKSPACE to place the repository.
+  clean:
+    description: Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching.
+    default: "true"
+  filter:
+    description: Partially clone against a given filter. Overrides sparse-checkout if set.
+  sparse-checkout:
+    description: Do a sparse checkout on given patterns, one per line.
+  sparse-checkout-cone-mode:
+    description: Whether to use cone-mode when doing a sparse checkout.
+    default: "true"
+  fetch-depth:
+    description: Number of commits to fetch. 0 indicates all history for all branches and tags.
+    default: "1"
+  fetch-tags:
+    description: Whether to fetch tags, even if fetch-depth > 0.
+    default: "false"
+  show-progress:
+    description: Whether to show progress status output when fetching.
+    default: "true"
+  lfs:
+    description: Whether to download Git-LFS files.
+    default: "false"
+  submodules:
+    description: "Whether to checkout submodules: `true`, `false`, or `recursive`."
+    default: "false"
+  set-safe-directory:
+    description: Add repository path as safe.directory for Git global config.
+    default: "true"
+  github-server-url:
+    description: The base URL for the GitHub instance to clone from. Defaults to the current instance.
+  allow-unsafe-pr-checkout:
+    description: >-
+      Required to check out fork pull request code from a workflow triggered by
+      pull_request_target or workflow_run. Review https://gh.io/securely-using-pull_request_target first.
+    default: "false"
+
+outputs:
+  ref:
+    description: The branch, tag or SHA that was checked out.
+    value: ${{ steps.checkout.outputs.ref }}
+  commit:
+    description: The commit SHA that was checked out.
+    value: ${{ steps.checkout.outputs.commit }}
+
+runs:
+  using: composite
+  steps:
+    - id: checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
+        token: ${{ inputs.token }}
+        ssh-key: ${{ inputs.ssh-key }}
+        ssh-known-hosts: ${{ inputs.ssh-known-hosts }}
+        ssh-strict: ${{ inputs.ssh-strict }}
+        ssh-user: ${{ inputs.ssh-user }}
+        persist-credentials: ${{ inputs.persist-credentials }}
+        path: ${{ inputs.path }}
+        clean: ${{ inputs.clean }}
+        filter: ${{ inputs.filter }}
+        sparse-checkout: ${{ inputs.sparse-checkout }}
+        sparse-checkout-cone-mode: ${{ inputs.sparse-checkout-cone-mode }}
+        fetch-depth: ${{ inputs.fetch-depth }}
+        fetch-tags: ${{ inputs.fetch-tags }}
+        show-progress: ${{ inputs.show-progress }}
+        lfs: ${{ inputs.lfs }}
+        submodules: ${{ inputs.submodules }}
+        set-safe-directory: ${{ inputs.set-safe-directory }}
+        github-server-url: ${{ inputs.github-server-url }}
+        allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}

@@ -1,0 +1,14 @@
+# Local tooling runs in containers so nothing needs to be installed on the host.
+# Use the Makefile targets rather than calling these services directly.
+services:
+  actionlint:
+    image: rhysd/actionlint:1.7.12
+    volumes:
+      - ./:/repo:ro
+    working_dir: /repo
+
+  tooling:
+    build: ./docker/tooling
+    volumes:
+      - ./:/repo:ro
+    working_dir: /repo

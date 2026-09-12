@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (same checks as `make lint`)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Lint workflows, actions, and skills
+        run: make lint
+
+  gh-skill-validate:
+    name: Validate skills with gh (dry run only, never publishes)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: gh skill publish --dry-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh skill publish --dry-run
+
+  test-checkout-action:
+    name: actions/checkout wrapper end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      # The wrapper cannot check itself out, so bootstrap with upstream first.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out again through the wrapper
+        id: wrapped
+        uses: ./actions/checkout
+        with:
+          path: wrapped
+          fetch-depth: 0
+      - name: Assert the wrapper behaved like upstream
+        env:
+          WRAPPED_COMMIT: ${{ steps.wrapped.outputs.commit }}
+          WRAPPED_REF: ${{ steps.wrapped.outputs.ref }}
+        run: |
+          set -eux
+          test -f wrapped/actions/checkout/action.yml
+          test "$WRAPPED_COMMIT" = "$GITHUB_SHA"
+          test -n "$WRAPPED_REF"
+          git -C wrapped rev-list --count HEAD

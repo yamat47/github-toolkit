@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make lint)",
+      "Bash(make lint-workflows)",
+      "Bash(make lint-actions)",
+      "Bash(make lint-skills)",
+      "Bash(make build)",
+      "Bash(make help)",
+      "Bash(docker compose run --rm actionlint:*)",
+      "Bash(docker compose run --rm tooling:*)",
+      "Bash(docker compose build:*)",
+      "Bash(gh skill publish --dry-run:*)"
+    ]
+  }
+}
