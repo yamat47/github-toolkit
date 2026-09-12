@@ -35,7 +35,7 @@ inputs:
 
 outputs:
   cache-hit:
-    description: Whether an exact match was found for the primary key.
+    description: "`true` when an exact match was found for the primary key; empty or `false` otherwise."
     value: ${{ steps.cache.outputs.cache-hit }}
 
 runs:

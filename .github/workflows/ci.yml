@@ -121,12 +121,13 @@ jobs:
           path: cache-smoke
           key: cache-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: cache-smoke-
-      - name: Assert the cache-hit output is reported
+      # actions/cache leaves cache-hit empty (not "false") when nothing matched.
+      - name: Assert the cache step ran and reported no hit
         env:
           CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
         run: |
           set -eux
-          test "$CACHE_HIT" = "false"
+          test "$CACHE_HIT" != "true"
           test -f cache-smoke/stamp
 
   test-upload-artifact-action:

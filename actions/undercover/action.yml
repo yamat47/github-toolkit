@@ -64,8 +64,8 @@ runs:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: |
         set +e -uo pipefail
-        log="$RUNNER_TEMP/undercover.log"
-        rm -f "$log"
+        # One log per invocation so several runs in one job do not overwrite each other.
+        log="$(mktemp "$RUNNER_TEMP/undercover.XXXXXX.log")"
 
         # Prefix `loc:` paths with the working directory (idempotently) so the
         # problem matcher resolves them from the repository root.
