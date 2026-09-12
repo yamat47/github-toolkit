@@ -1,0 +1,69 @@
+name: Setup Playwright Chromium
+description: >-
+  Install the Chromium browser for the Playwright version a pnpm project
+  already depends on, caching the browser download between runs. On a cache hit
+  only the system dependencies are installed.
+author: yamat47
+
+# Run this after the project's dependencies are installed (for example with
+# setup-node-with-pnpm) so that `playwright --version` resolves.
+inputs:
+  working-directory:
+    description: Directory of the project that depends on Playwright.
+    default: .
+  exec:
+    description: Command prefix used to run the project's Playwright CLI.
+    default: pnpm exec
+  cache-path:
+    description: Directory where Playwright stores browsers. Must match PLAYWRIGHT_BROWSERS_PATH if that is set.
+    default: ~/.cache/ms-playwright
+
+outputs:
+  version:
+    description: The Playwright version the browser was installed for.
+    value: ${{ steps.version.outputs.version }}
+  cache-hit:
+    description: Whether the browser download was restored from cache.
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Playwright version
+      id: version
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        EXEC: ${{ inputs.exec }}
+      run: |
+        set -euo pipefail
+        # `playwright --version` prints "Version 1.63.0" for both playwright and playwright-core.
+        version="$($EXEC playwright --version | awk '{print $2}')"
+        if [ -z "$version" ]; then
+          echo "::error::Could not resolve the Playwright version; is Playwright installed in ${PWD}?"
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ inputs.cache-path }}
+        key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
+
+    - name: Install Chromium and its dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        EXEC: ${{ inputs.exec }}
+      run: $EXEC playwright install --with-deps chromium
+
+    - name: Install Chromium dependencies only
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        EXEC: ${{ inputs.exec }}
+      run: $EXEC playwright install-deps chromium

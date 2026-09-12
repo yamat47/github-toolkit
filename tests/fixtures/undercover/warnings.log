@@ -1,0 +1,8 @@
+undercover: 👮‍♂️ some methods have no test coverage! Please add specs for methods listed below
+🚨 1) node `publish` type: instance method,
+     loc: app/models/post.rb:12:18, coverage: 50.0%
+  12:   def publish
+  13:     return if published?
+  14:     update!(published_at: Time.current)
+  15:   end
+Undercover finished in 0.4213s

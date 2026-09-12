@@ -1,0 +1,72 @@
+name: Setup Node.js
+description: >-
+  Thin wrapper around actions/setup-node pinned to a full commit SHA. Consumers
+  reference this repository once and receive upstream updates whenever the pin
+  here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror actions/setup-node v7 exactly (names, defaults, descriptions
+# abridged). See https://github.com/actions/setup-node for full documentation.
+# A composite action silently drops inputs it does not declare, so every
+# upstream input is listed even when this repository never uses it.
+inputs:
+  node-version:
+    description: "Version spec of the version to use. Examples: 24, 22.12.0, >=20."
+  node-version-file:
+    description: "File containing the version spec. Examples: package.json, .nvmrc, .node-version."
+  architecture:
+    description: "Target architecture. Examples: x86, x64. Defaults to the system architecture."
+  check-latest:
+    description: Check for the latest available version that satisfies the version spec.
+    default: "false"
+  registry-url:
+    description: Optional registry to set up for auth in a project-level .npmrc.
+  scope:
+    description: Optional scope for authenticating against scoped registries.
+  token:
+    description: Token used to pull Node.js distributions from node-versions.
+    default: ${{ github.server_url == 'https://github.com' && github.token || '' }}
+  cache:
+    description: "Package manager to cache for: npm, yarn, or pnpm."
+  package-manager-cache:
+    description: Set to false to disable automatic caching when package.json names npm as the package manager.
+    default: "true"
+  cache-dependency-path:
+    description: Path to the dependency file used for the cache key (package-lock.json, pnpm-lock.yaml, ...).
+  mirror:
+    description: Alternative mirror to download Node.js binaries from.
+  mirror-token:
+    description: Token used as the Authorization header when fetching from the mirror.
+
+outputs:
+  cache-hit:
+    description: Whether a cache was hit.
+    value: ${{ steps.setup.outputs.cache-hit }}
+  cache-primary-key:
+    description: The key used to restore and save the cache.
+    value: ${{ steps.setup.outputs.cache-primary-key }}
+  cache-matched-key:
+    description: The key of the cache that was restored. Empty when no cache is found.
+    value: ${{ steps.setup.outputs.cache-matched-key }}
+  node-version:
+    description: The installed Node.js version.
+    value: ${{ steps.setup.outputs.node-version }}
+
+runs:
+  using: composite
+  steps:
+    - id: setup
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        node-version-file: ${{ inputs.node-version-file }}
+        architecture: ${{ inputs.architecture }}
+        check-latest: ${{ inputs.check-latest }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+        token: ${{ inputs.token }}
+        cache: ${{ inputs.cache }}
+        package-manager-cache: ${{ inputs.package-manager-cache }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        mirror: ${{ inputs.mirror }}
+        mirror-token: ${{ inputs.mirror-token }}

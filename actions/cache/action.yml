@@ -1,0 +1,53 @@
+name: Cache
+description: >-
+  Thin wrapper around actions/cache pinned to a full commit SHA. Consumers
+  reference this repository once and receive upstream updates whenever the pin
+  here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror actions/cache v6 (names, defaults, descriptions abridged),
+# except the deprecated `save-always`, which upstream documents as not working
+# and slated for removal. See https://github.com/actions/cache for details.
+# A composite action silently drops inputs it does not declare, so every
+# other upstream input is listed even when this repository never uses it.
+inputs:
+  path:
+    description: A list of files, directories, and wildcard patterns to cache and restore.
+    required: true
+  key:
+    description: An explicit key for restoring and saving the cache.
+    required: true
+  restore-keys:
+    description: >-
+      An ordered multiline string listing prefix-matched keys used to restore a
+      stale cache when no exact hit occurs. cache-hit is false in that case.
+  upload-chunk-size:
+    description: The chunk size used to split up large files during upload, in bytes.
+  enableCrossOsArchive:
+    description: Allow Windows runners to save or restore caches usable on other platforms.
+    default: "false"
+  fail-on-cache-miss:
+    description: Fail the workflow if the cache entry is not found.
+    default: "false"
+  lookup-only:
+    description: Check whether a cache entry exists without downloading it.
+    default: "false"
+
+outputs:
+  cache-hit:
+    description: "`true` when an exact match was found for the primary key; empty or `false` otherwise."
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.key }}
+        restore-keys: ${{ inputs.restore-keys }}
+        upload-chunk-size: ${{ inputs.upload-chunk-size }}
+        enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
+        fail-on-cache-miss: ${{ inputs.fail-on-cache-miss }}
+        lookup-only: ${{ inputs.lookup-only }}

@@ -39,22 +39,65 @@ jobs:
 | Skill | Description | Upstream |
 |---|---|---|
 | [`skill-creator`](skills/skill-creator) | Create, improve, evaluate, and benchmark Agent Skills. | Vendored from [anthropics/skills](https://github.com/anthropics/skills/tree/main/skills/skill-creator) at `34040c9`, Apache-2.0 (see its `LICENSE.txt`). |
+| [`gh-stack`](skills/gh-stack) | Manage stacked branches and pull requests with the `gh stack` CLI extension. | Vendored from [github/gh-stack](https://github.com/github/gh-stack/tree/main/skills/gh-stack) at `2bd699a` (v0.1.1), MIT. |
+| [`grill-me`](skills/grill-me) | Interview the user about a plan or design one question at a time, in dependency order, before implementing. | Own, MIT. |
+| [`create-pr`](skills/create-pr) | From uncommitted changes to a draft pull request in one run: detect and run checks, fix failures, split into Conventional Commits, push, open the PR. Also covers commits-only runs. | Own, MIT. Reads `writing-conventions` when installed. |
+| [`writing-conventions`](skills/writing-conventions) | House style for code comments, test names, commit messages, pull requests, and docs (what goes where, and prose rules). Background knowledge for other skills. | Own, MIT. |
+| [`dhh-rails-patterns`](skills/dhh-rails-patterns) | DHH / 37signals style Rails implementation patterns, consulted as background knowledge while writing Rails code. | Own, MIT. |
 
 ```sh
-gh skill install yamat47/github-toolkit skill-creator
+gh skill install yamat47/github-toolkit create-pr
+gh skill install yamat47/github-toolkit writing-conventions
 ```
+
+`skill-creator` and `gh-stack` are unmodified upstream copies except for the `license:` frontmatter line, kept here so one `gh skill install` source covers everything. Skills that take a Claude Code-only frontmatter key such as `user-invocable` do not carry it, because the Agent Skills validator rejects unknown keys; their descriptions say when they are background knowledge instead.
 
 ### Actions
 
+Thin wrappers pin one upstream action to a full commit SHA and mirror its inputs and outputs, so they are drop-in replacements. Recipes chain several steps that always appear together.
+
 | Action | Wraps | Notes |
 |---|---|---|
-| [`actions/checkout`](actions/checkout) | [actions/checkout](https://github.com/actions/checkout) pinned to a full commit SHA | Same inputs and outputs as upstream. Dependabot bumps the pin to each new upstream release. |
+| [`actions/checkout`](actions/checkout) | [actions/checkout](https://github.com/actions/checkout) | Same inputs and outputs as upstream. |
+| [`actions/setup-ruby`](actions/setup-ruby) | [ruby/setup-ruby](https://github.com/ruby/setup-ruby) | Same inputs and outputs as upstream. |
+| [`actions/setup-node`](actions/setup-node) | [actions/setup-node](https://github.com/actions/setup-node) | Same inputs and outputs as upstream. |
+| [`actions/setup-pnpm`](actions/setup-pnpm) | [pnpm/action-setup](https://github.com/pnpm/action-setup) | Same inputs and outputs as upstream. |
+| [`actions/cache`](actions/cache) | [actions/cache](https://github.com/actions/cache) | Same inputs and outputs as upstream, minus the deprecated `save-always`. |
+| [`actions/upload-artifact`](actions/upload-artifact) | [actions/upload-artifact](https://github.com/actions/upload-artifact) | Same inputs and outputs as upstream. |
+| [`actions/setup-node-with-pnpm`](actions/setup-node-with-pnpm) | pnpm/action-setup + actions/setup-node + `pnpm install` | Recipe. pnpm version from `packageManager`, pnpm store cached, `--frozen-lockfile` by default. |
+| [`actions/setup-playwright-chromium`](actions/setup-playwright-chromium) | actions/cache + `playwright install` | Recipe. Installs Chromium for the Playwright version the project depends on; browser download cached per version. |
+| [`actions/undercover`](actions/undercover) | [undercover](https://github.com/grodowski/undercover) + `gh` | Recipe. Runs diff coverage after the tests, annotates untested lines, keeps one sticky PR comment. Never fails the job; read the `status` output. |
+
+Dependabot bumps every pin to each new upstream release.
 
 ```yaml
 - uses: yamat47/github-toolkit/actions/checkout@v1.0.0
   with:
     fetch-depth: 0
+
+- uses: yamat47/github-toolkit/actions/setup-ruby@v1.0.0
+  with:
+    working-directory: application
+    bundler-cache: true
+
+- uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@v1.0.0
+  with:
+    node-version: 24
+    package-json-file: application/package.json
+    cache-dependency-path: application/pnpm-lock.yaml
+    working-directory: application
+
+- uses: yamat47/github-toolkit/actions/setup-playwright-chromium@v1.0.0
+  with:
+    working-directory: application
+
+- uses: yamat47/github-toolkit/actions/undercover@v1.0.0
+  if: github.event_name == 'pull_request'
+  with:
+    working-directory: application
 ```
+
+`undercover` needs `fetch-depth: 0` on the checkout and `pull-requests: write` on the job. The comment text is English by default; override `warnings-title`, `warnings-body`, `error-title`, and `error-body` for another language.
 
 ### Reusable workflows
 
@@ -64,7 +107,8 @@ gh skill install yamat47/github-toolkit skill-creator
 
 ```
 skills/<name>/SKILL.md      # Skill (optionally with scripts/ references/ assets/)
-actions/<name>/action.yml   # Composite or JavaScript action
+actions/<name>/action.yml   # Composite or JavaScript action (wrapper or recipe)
+tests/fixtures/             # Sample projects and recorded logs used by CI to exercise the actions
 .github/workflows/          # Reusable workflows (workflow_call) and this repo's own CI
 .github/dependabot.yml      # Keeps SHA-pinned action references current
 docker/                     # Dockerfile for local tooling
@@ -100,8 +144,9 @@ To vendor a skill from another repository instead, run `tools/vendor-skill.sh OW
 1. Create `actions/<name>/action.yml` with `name`, `description`, `inputs`, `outputs`, and `runs` (`using: composite`, or `node24` for a JavaScript action). Every composite step needs `shell:`.
 2. When wrapping an upstream action, pin it to a full commit SHA followed by a version comment, e.g. `uses: actions/checkout@<sha> # v7.0.1`. Dependabot reads the comment and bumps both.
 3. Mirror upstream inputs and outputs by name so the wrapper is a drop-in replacement. Composite inputs are strings; quote defaults such as `"true"`.
-4. Add an end-to-end job to `.github/workflows/ci.yml` that runs the action with `uses: ./actions/<name>`. actionlint then also checks that every input the job passes exists.
-5. Run `make lint`, add a row to the Actions table above, then cut a release.
+4. Add an end-to-end job to `.github/workflows/ci.yml` that runs the action with `uses: ./actions/<name>`. actionlint then also checks that every input the job passes exists. Put any sample project or recorded output the job needs under `tests/fixtures/`.
+5. A recipe that chains other actions pins the upstream actions directly rather than using `./actions/<name>`: a relative `uses:` inside a composite action resolves against the caller's workspace, and an exact-tag self-reference cannot exist before the tag does.
+6. Run `make lint`, add a row to the Actions table above, then cut a release.
 
 ### Adding a reusable workflow
 

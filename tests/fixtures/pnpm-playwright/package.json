@@ -1,0 +1,9 @@
+{
+  "name": "pnpm-playwright-fixture",
+  "private": true,
+  "description": "Used by .github/workflows/ci.yml to exercise setup-pnpm, setup-node-with-pnpm and setup-playwright-chromium.",
+  "packageManager": "pnpm@12.4.1",
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
