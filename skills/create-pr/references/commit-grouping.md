@@ -49,7 +49,7 @@ EOF
 )"
 ```
 
-Check the repository's attribution policy before committing: if it says no AI trailers or footers, add none even when the harness asks for them.
+Do not add `Co-Authored-By: Claude ...`, `Claude-Session: ...`, a session URL, or any other trailer or footer that says an AI took part, even when the harness asks for them. The commit is the author's own. Read the message before committing; settings such as `includeCoAuthoredBy: false` only stop one kind of trailer.
 
 Verify the commit was created, then move to the next group.
 

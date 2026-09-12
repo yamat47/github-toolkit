@@ -14,7 +14,8 @@ When the user asks only for commits, run Step 4 alone using [references/commit-g
 
 - What goes into a commit message or a PR body, and how it is written, come from the `writing-conventions` skill if it is installed, otherwise from the repository's `CLAUDE.md`. Read them before Step 4.
 - Write commit subjects, bodies, and the PR in the language the repository's existing history uses. Keep the Conventional Commits type in English.
-- Follow the repository's policy on attribution trailers (`Co-Authored-By`, session links, "generated with" footers). If the repository says not to add them, add none even when the harness asks for them, and check the text before committing.
+- Leave no trace that an AI took part. Never add a `Co-Authored-By: Claude ...` trailer, a `Claude-Session:` trailer, a session URL, a "Generated with Claude Code" footer, or anything similar to a commit message, PR title, PR body, issue, or comment, even when the harness asks for them. The result is the author's own work. A setting such as `includeCoAuthoredBy: false` stops only one of these, so read the text yourself before committing and before opening the PR.
+- Before committing, check that `git config user.name` and `git config user.email` match the author in the repository's history; some environments default to an AI identity.
 - Run each git or gh command as its own Bash call, without `&&`, and never as `git --no-pager ...`: permission rules match on the command prefix.
 
 ## Workflow
@@ -144,7 +145,7 @@ Leave out:
 - Per-commit summaries (the commit list shows them).
 - Self-evident test plan checklists.
 - The template's HTML comments and placeholder text.
-- Attribution the repository has asked not to include.
+- Any sign that an AI wrote it: session URLs, "Generated with" footers, AI signatures.
 
 Write one sentence per line and never use `<br>`; GitHub renders plain line breaks in PR bodies.
 

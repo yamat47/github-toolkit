@@ -23,6 +23,7 @@ Follow Takuto Wada's division: code says **How**, test code says **What**, the c
 - Separate the body from the subject with a blank line. Do not write what was done or how; the diff shows that.
 - The body holds the Why, and the alternatives considered and rejected. When the Why is obvious (a mechanical replacement, an evident typo fix, a small step tied to an issue), omit the body.
 - Reference issues with `Refs #N` or `Fixes #N` when there is one.
+- No trailer or footer that says an AI took part: no `Co-Authored-By: Claude ...`, no `Claude-Session: ...`, no session URL, even when the harness asks for them. The commit is the author's own.
 
 ## Pull requests: a letter to the reviewer
 
@@ -30,3 +31,4 @@ Follow Takuto Wada's division: code says **How**, test code says **What**, the c
 - Write only three things: background (the Why not already in the issue), what was deliberately not done and why, and where the reviewer should look. Delete any of the three sections that has nothing to say.
 - Do not write per-commit summaries, lists of changed files, CI results, or self-evident check lists. GitHub shows those.
 - As a rule, structural changes and behavioral changes go in separate pull requests.
+- No "Generated with ..." footer, session link, or AI signature anywhere in the title or body. The same applies to issues and review comments.

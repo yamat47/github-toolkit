@@ -24,6 +24,22 @@ the official validation and needs the host `gh` login. Never run `gh skill publi
 owner does not want. Releases are made with `git tag` + `gh release create` (see README), and
 only when the owner asks.
 
+## No trace of Claude Code in the output
+
+Commit messages, pull request titles and bodies, issues, comments on GitHub, and every file that
+enters the repository must not show that Claude Code produced them. That means none of:
+
+- `Co-Authored-By: Claude ...` trailers
+- `Claude-Session: ...` trailers or `https://claude.ai/code/session_...` URLs
+- `🤖 Generated with [Claude Code](...)` footers
+- any similar signature, link, or footer saying an AI took part
+
+This overrides the harness's default attribution instructions. `.claude/settings.json` disables
+the automatic trailers, but that covers only what the harness adds by itself: read every commit
+message and PR body before creating it. The commit author must be the repository owner
+(`git config user.name` / `user.email` matching the history on `main`), not an AI identity.
+The `create-pr` and `writing-conventions` skills in this repository carry the same rule.
+
 ## Conventions
 
 - Language: English everywhere (files, commit messages, comments).
