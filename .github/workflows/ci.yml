@@ -13,6 +13,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Every action under actions/ has an end-to-end job here. Besides proving the
+# action runs, `uses: ./actions/<name>` lets actionlint check the inputs each
+# job passes against the action's declared inputs (see `make lint-workflows`).
 jobs:
   lint:
     name: Lint (same checks as `make lint`)
@@ -54,3 +57,176 @@ jobs:
           test "$WRAPPED_COMMIT" = "$GITHUB_SHA"
           test -n "$WRAPPED_REF"
           git -C wrapped rev-list --count HEAD
+
+  test-setup-ruby-action:
+    name: actions/setup-ruby wrapper end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: ruby
+        uses: ./actions/setup-ruby
+        with:
+          ruby-version: "3.4"
+      - name: Assert Ruby 3.4 is on PATH and the output is set
+        env:
+          RUBY_PREFIX: ${{ steps.ruby.outputs.ruby-prefix }}
+        run: |
+          set -eux
+          ruby -v | grep -F 'ruby 3.4'
+          test -d "$RUBY_PREFIX"
+
+  test-setup-node-action:
+    name: actions/setup-node wrapper end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: node
+        uses: ./actions/setup-node
+        with:
+          node-version: "24"
+      - name: Assert Node.js 24 is on PATH and the output is set
+        env:
+          NODE_VERSION: ${{ steps.node.outputs.node-version }}
+        run: |
+          set -eux
+          node -v | grep -E '^v24\.'
+          test -n "$NODE_VERSION"
+
+  test-setup-pnpm-action:
+    name: actions/setup-pnpm wrapper end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: pnpm
+        uses: ./actions/setup-pnpm
+        with:
+          package_json_file: tests/fixtures/pnpm-playwright/package.json
+      - name: Assert the packageManager version was installed and outputs are set
+        env:
+          BIN_DEST: ${{ steps.pnpm.outputs.bin_dest }}
+        run: |
+          set -eux
+          test "$(pnpm --version)" = "12.4.1"
+          test -x "$BIN_DEST/pnpm"
+
+  test-cache-action:
+    name: actions/cache wrapper end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: mkdir -p cache-smoke && date > cache-smoke/stamp
+      - id: cache
+        uses: ./actions/cache
+        with:
+          path: cache-smoke
+          key: cache-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: cache-smoke-
+      - name: Assert the cache-hit output is reported
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          set -eux
+          test "$CACHE_HIT" = "false"
+          test -f cache-smoke/stamp
+
+  test-upload-artifact-action:
+    name: actions/upload-artifact wrapper end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: mkdir -p artifact-smoke && echo "$GITHUB_SHA" > artifact-smoke/sha.txt
+      - id: upload
+        uses: ./actions/upload-artifact
+        with:
+          name: artifact-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifact-smoke
+          retention-days: 1
+      - name: Assert the outputs are set
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+        run: |
+          set -eux
+          test -n "$ARTIFACT_ID"
+          test -n "$ARTIFACT_URL"
+          test -n "$ARTIFACT_DIGEST"
+
+  test-pnpm-and-playwright-recipes:
+    name: setup-node-with-pnpm + setup-playwright-chromium end-to-end
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/fixtures/pnpm-playwright
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: node
+        uses: ./actions/setup-node-with-pnpm
+        with:
+          node-version: "24"
+          package-json-file: tests/fixtures/pnpm-playwright/package.json
+          cache-dependency-path: tests/fixtures/pnpm-playwright/pnpm-lock.yaml
+          working-directory: tests/fixtures/pnpm-playwright
+      - name: Assert dependencies were installed
+        env:
+          NODE_VERSION: ${{ steps.node.outputs.node-version }}
+        run: |
+          set -eux
+          test -n "$NODE_VERSION"
+          test -d node_modules/playwright
+      - id: playwright
+        uses: ./actions/setup-playwright-chromium
+        with:
+          working-directory: tests/fixtures/pnpm-playwright
+      - name: Assert Chromium launches
+        env:
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        run: |
+          set -eux
+          test "$PLAYWRIGHT_VERSION" = "1.63.0"
+          node -e "require('playwright').chromium.launch().then(b => b.close())"
+
+  test-undercover-action:
+    name: actions/undercover end-to-end (replayed logs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Each run replays a recorded undercover log instead of running the gem,
+      # which keeps the job free of a Ruby project while still exercising the
+      # status detection, the problem matcher and the path rewriting. The
+      # sticky comment is disabled so this repository's PRs stay clean.
+      - id: ok
+        uses: ./actions/undercover
+        with:
+          command: cat "$GITHUB_WORKSPACE/tests/fixtures/undercover/ok.log"
+          comment: "false"
+      - id: warnings
+        uses: ./actions/undercover
+        with:
+          working-directory: tests
+          command: cat "$GITHUB_WORKSPACE/tests/fixtures/undercover/warnings.log"
+          comment: "false"
+      - id: error
+        uses: ./actions/undercover
+        with:
+          command: cat "$GITHUB_WORKSPACE/tests/fixtures/undercover/error.log"
+          comment: "false"
+      - id: crash
+        uses: ./actions/undercover
+        with:
+          command: cat "$GITHUB_WORKSPACE/tests/fixtures/undercover/crash.log"
+          comment: "false"
+      - name: Assert each replay was classified correctly
+        env:
+          OK: ${{ steps.ok.outputs.status }}
+          WARNINGS: ${{ steps.warnings.outputs.status }}
+          ERROR: ${{ steps.error.outputs.status }}
+          CRASH: ${{ steps.crash.outputs.status }}
+          LOG: ${{ steps.warnings.outputs.log }}
+        run: |
+          set -eux
+          test "$OK" = "ok"
+          test "$WARNINGS" = "warnings"
+          test "$ERROR" = "error"
+          test "$CRASH" = "error"
+          grep -q 'loc: app/models/post.rb' "$LOG"

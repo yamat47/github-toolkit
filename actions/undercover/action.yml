@@ -1,0 +1,160 @@
+name: Undercover diff coverage
+description: >-
+  Run undercover (https://github.com/grodowski/undercover) after the test suite,
+  annotate untested changed lines with a problem matcher, and keep one sticky
+  comment on the pull request that is removed again once coverage is complete.
+  Never fails the job by itself; callers read the `status` output if they want to.
+author: yamat47
+
+# Requires a full clone (`fetch-depth: 0`) so undercover can diff against the
+# base branch, `gh` on the runner, and `pull-requests: write` when commenting.
+inputs:
+  working-directory:
+    description: Directory where the command runs. Paths in undercover's output are made relative to the repository root from here.
+    default: .
+  command:
+    description: Command that runs undercover. Flags can also live in a `.undercover` file in the working directory.
+    default: bundle exec undercover
+  comment:
+    description: Post (or remove) the sticky pull request comment.
+    default: "true"
+  pr-number:
+    description: Pull request to comment on. Defaults to the triggering pull request, or the one associated with the commit on push events.
+    default: ${{ github.event.pull_request.number }}
+  token:
+    description: Token used to manage the comment. Needs pull-requests write access.
+    default: ${{ github.token }}
+  marker:
+    description: Hidden first line that identifies the sticky comment.
+    default: <!-- undercover-sticky-comment -->
+  warnings-title:
+    description: Comment heading when undercover reports untested lines.
+    default: "🚨 Undercover: untested changed lines"
+  warnings-body:
+    description: Comment text when undercover reports untested lines.
+    default: Changed lines in this pull request have no test coverage. Add specs for the methods and blocks listed below.
+  error-title:
+    description: Comment heading when undercover itself did not finish.
+    default: "⚠️ Undercover did not run"
+  error-body:
+    description: Comment text when undercover itself did not finish.
+    default: Diff coverage was not checked in this run. See the workflow log for details.
+
+outputs:
+  status:
+    description: "`ok` when nothing is uncovered, `warnings` when undercover flagged lines, `error` when undercover did not finish."
+    value: ${{ steps.run.outputs.status }}
+  log:
+    description: Path to the captured undercover output.
+    value: ${{ steps.run.outputs.log }}
+
+runs:
+  using: composite
+  steps:
+    - name: Register problem matcher
+      shell: bash
+      run: echo "::add-matcher::${{ github.action_path }}/problem-matchers/undercover.json"
+
+    - name: Run undercover
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        COMMAND: ${{ inputs.command }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        set +e -uo pipefail
+        log="$RUNNER_TEMP/undercover.log"
+        rm -f "$log"
+
+        # Prefix `loc:` paths with the working directory (idempotently) so the
+        # problem matcher resolves them from the repository root.
+        prefix=""
+        if [ "$WORKING_DIRECTORY" != "." ]; then
+          prefix="${WORKING_DIRECTORY%/}/"
+        fi
+        bash -c "$COMMAND" 2>&1 \
+          | tee "$log" \
+          | sed -E "s|^([[:space:]]*loc: )(${prefix})?|\1${prefix}|"
+
+        # undercover exits 1 both when it finds uncovered lines and when it
+        # crashes, so the exit code cannot tell the two apart. The trailing
+        # "Undercover finished in ..." line is printed only on a normal run,
+        # and "❌ ERROR" means it ran but found no coverage report.
+        if ! grep -q '^Undercover finished' "$log" || grep -q '^❌ ERROR' "$log"; then
+          status=error
+          echo "::warning title=undercover::undercover did not finish; diff coverage was not checked in this run."
+        elif grep -q '🚨' "$log"; then
+          status=warnings
+        else
+          status=ok
+        fi
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+        echo "log=$log" >> "$GITHUB_OUTPUT"
+
+    - name: Remove problem matcher
+      shell: bash
+      run: echo "::remove-matcher owner=undercover::"
+
+    - name: Update sticky comment
+      if: inputs.comment == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ github.repository }}
+        SHA: ${{ github.sha }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        MARKER: ${{ inputs.marker }}
+        STATUS: ${{ steps.run.outputs.status }}
+        LOG: ${{ steps.run.outputs.log }}
+        WARNINGS_TITLE: ${{ inputs.warnings-title }}
+        WARNINGS_BODY: ${{ inputs.warnings-body }}
+        ERROR_TITLE: ${{ inputs.error-title }}
+        ERROR_BODY: ${{ inputs.error-body }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$PR_NUMBER" ]; then
+          PR_NUMBER="$(gh api "repos/$GH_REPO/commits/$SHA/pulls" --jq '.[0].number // empty')"
+        fi
+        if [ -z "$PR_NUMBER" ]; then
+          echo "No pull request for $SHA; skipping the comment."
+          exit 0
+        fi
+
+        # Sticky: delete every previous comment that starts with the marker,
+        # then post a fresh one only when there is something to say.
+        gh api --paginate "repos/$GH_REPO/issues/$PR_NUMBER/comments" \
+          --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" \
+          | xargs -I{} -r gh api -X DELETE "repos/$GH_REPO/issues/comments/{}"
+
+        if [ "$STATUS" = "ok" ]; then
+          echo "No undercover warnings; previous comment (if any) removed."
+          exit 0
+        fi
+
+        body="$RUNNER_TEMP/undercover-comment.md"
+        if [ "$STATUS" = "error" ]; then
+          {
+            echo "$MARKER"
+            echo "## $ERROR_TITLE"
+            echo
+            echo "$ERROR_BODY"
+          } > "$body"
+        else
+          {
+            echo "$MARKER"
+            echo "## $WARNINGS_TITLE"
+            echo
+            echo "$WARNINGS_BODY"
+            echo
+            echo "<details open><summary>Details</summary>"
+            echo
+            echo '```'
+            sed -n '1,/^Undercover finished/p' "$LOG" | sed 's/\x1b\[[0-9;]*m//g'
+            echo '```'
+            echo
+            echo "</details>"
+          } > "$body"
+        fi
+        gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body-file "$body"

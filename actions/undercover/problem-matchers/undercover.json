@@ -1,0 +1,16 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "undercover",
+      "severity": "warning",
+      "pattern": [
+        {
+          "regexp": "^\\s*loc:\\s+(.+?):(\\d+):\\d+,\\s+coverage:\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        }
+      ]
+    }
+  ]
+}

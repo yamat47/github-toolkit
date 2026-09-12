@@ -1,0 +1,5 @@
+❌ ERROR: No coverage report found. Checked default paths:
+  - ./coverage/coverage.json (SimpleCov)
+  - ./coverage/lcov/fixture.lcov (LCOV)
+Set a custom path with --lcov or --simplecov option
+Undercover finished in 0.0102s
