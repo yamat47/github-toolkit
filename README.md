@@ -39,10 +39,18 @@ jobs:
 | Skill | Description | Upstream |
 |---|---|---|
 | [`skill-creator`](skills/skill-creator) | Create, improve, evaluate, and benchmark Agent Skills. | Vendored from [anthropics/skills](https://github.com/anthropics/skills/tree/main/skills/skill-creator) at `34040c9`, Apache-2.0 (see its `LICENSE.txt`). |
+| [`gh-stack`](skills/gh-stack) | Manage stacked branches and pull requests with the `gh stack` CLI extension. | Vendored from [github/gh-stack](https://github.com/github/gh-stack/tree/main/skills/gh-stack) at `2bd699a` (v0.1.1), MIT. |
+| [`grill-me`](skills/grill-me) | Interview the user about a plan or design one question at a time, in dependency order, before implementing. | Own, MIT. |
+| [`create-pr`](skills/create-pr) | From uncommitted changes to a draft pull request in one run: detect and run checks, fix failures, split into Conventional Commits, push, open the PR. Also covers commits-only runs. | Own, MIT. Reads `writing-conventions` when installed. |
+| [`writing-conventions`](skills/writing-conventions) | House style for code comments, test names, commit messages, pull requests, and docs (what goes where, and prose rules). Background knowledge for other skills. | Own, MIT. |
+| [`dhh-rails-patterns`](skills/dhh-rails-patterns) | DHH / 37signals style Rails implementation patterns, consulted as background knowledge while writing Rails code. | Own, MIT. |
 
 ```sh
-gh skill install yamat47/github-toolkit skill-creator
+gh skill install yamat47/github-toolkit create-pr
+gh skill install yamat47/github-toolkit writing-conventions
 ```
+
+`skill-creator` and `gh-stack` are unmodified upstream copies except for the `license:` frontmatter line, kept here so one `gh skill install` source covers everything. Skills that take a Claude Code-only frontmatter key such as `user-invocable` do not carry it, because the Agent Skills validator rejects unknown keys; their descriptions say when they are background knowledge instead.
 
 ### Actions
 
