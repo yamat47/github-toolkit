@@ -231,3 +231,13 @@ jobs:
           test "$ERROR" = "error"
           test "$CRASH" = "error"
           grep -q 'loc: app/models/post.rb' "$LOG"
+
+  # A reusable-workflow job cannot carry extra steps, so the assertion lives in
+  # the workflow itself: with dry-run on, it fails unless gh reports an update.
+  # The fixture is a skill installed from v1.0.0 and is never refreshed.
+  test-update-skills-workflow:
+    name: update-skills reusable workflow (dry run against a stale fixture)
+    uses: ./.github/workflows/update-skills.yml
+    with:
+      dry-run: true
+      dir: tests/fixtures/installed-skills
