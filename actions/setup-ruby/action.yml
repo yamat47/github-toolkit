@@ -1,0 +1,60 @@
+name: Setup Ruby
+description: >-
+  Thin wrapper around ruby/setup-ruby pinned to a full commit SHA. Consumers
+  reference this repository once and receive upstream updates whenever the pin
+  here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror ruby/setup-ruby v1.321 exactly (names, defaults, descriptions
+# abridged). See https://github.com/ruby/setup-ruby for full documentation.
+# A composite action silently drops inputs it does not declare, so every
+# upstream input is listed even when this repository never uses it.
+inputs:
+  ruby-version:
+    description: >-
+      Engine and version to use. Reads from .ruby-version, .tool-versions or
+      mise.toml if unset.
+    default: default
+  rubygems:
+    description: "RubyGems version to use: default, latest, or a version number."
+  bundler:
+    description: >-
+      Bundler version to install: Gemfile.lock (the default), default, latest,
+      none, or a version number.
+  bundler-cache:
+    description: Run "bundle install" and cache the result automatically.
+    default: "false"
+  working-directory:
+    description: >-
+      Working directory used to resolve .ruby-version, .tool-versions, mise.toml
+      and Gemfile.lock.
+  cache-version:
+    description: Arbitrary string added to the bundler cache key. Change it to invalidate the cache.
+  self-hosted:
+    description: Treat the runner as self-hosted and skip prebuilt Ruby binaries.
+  windows-toolchain:
+    description: "Windows toolchain setup: default or none."
+  token:
+    description: Token used to download Ruby release assets.
+    default: ${{ github.server_url == 'https://github.com' && github.token || '' }}
+
+outputs:
+  ruby-prefix:
+    description: The prefix of the installed Ruby.
+    value: ${{ steps.setup.outputs.ruby-prefix }}
+
+runs:
+  using: composite
+  steps:
+    - id: setup
+      uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+      with:
+        ruby-version: ${{ inputs.ruby-version }}
+        rubygems: ${{ inputs.rubygems }}
+        bundler: ${{ inputs.bundler }}
+        bundler-cache: ${{ inputs.bundler-cache }}
+        working-directory: ${{ inputs.working-directory }}
+        cache-version: ${{ inputs.cache-version }}
+        self-hosted: ${{ inputs.self-hosted }}
+        windows-toolchain: ${{ inputs.windows-toolchain }}
+        token: ${{ inputs.token }}
