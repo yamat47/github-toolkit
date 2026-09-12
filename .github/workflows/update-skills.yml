@@ -1,0 +1,215 @@
+# Keeps skills installed with `gh skill install` up to date in the calling
+# repository, the way Dependabot keeps action pins current: runs
+# `gh skill update --all`, commits whatever changed, and opens (or refreshes)
+# one pull request from a fixed branch.
+#
+# The caller declares the permissions; this workflow needs no more than
+# `contents: write` and `pull-requests: write` (`contents: read` for dry runs).
+name: Update skills
+
+on:
+  workflow_call:
+    inputs:
+      dir:
+        description: >-
+          Directory passed to `gh skill update --dir`. Empty scans the project
+          scope of the checked-out repository (every known agent host directory).
+        type: string
+        default: ""
+      unpin:
+        description: Pass `--unpin` so skills installed with `--pin` are updated as well.
+        type: boolean
+        default: false
+      dry-run:
+        description: >-
+          Only run `gh skill update --dry-run`; never write, commit, or push.
+          Fails unless at least one update is available, which is how this
+          repository's own CI proves the workflow works.
+        type: boolean
+        default: false
+      branch:
+        description: Branch the pull request is opened from. Force-pushed on every run.
+        type: string
+        default: update-skills
+      commit-message:
+        description: Subject line of the commit; the body lists the updated skills.
+        type: string
+        default: "chore: update agent skills"
+      pr-title:
+        description: Title of the pull request.
+        type: string
+        default: Update agent skills
+      labels:
+        description: Comma-separated labels to put on the pull request. They must already exist.
+        type: string
+        default: ""
+    secrets:
+      token:
+        description: >-
+          Token used to check out, push, and open the pull request. Defaults to
+          `github.token`, whose pull requests do not trigger the caller's CI.
+        required: false
+    outputs:
+      updated:
+        description: "`true` when at least one skill was updated and pushed, otherwise `false`."
+        value: ${{ jobs.update.outputs.updated }}
+      pull-request-url:
+        description: URL of the created or refreshed pull request; empty when nothing changed.
+        value: ${{ jobs.update.outputs.pull-request-url }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      updated: ${{ steps.changes.outputs.updated || 'false' }}
+      pull-request-url: ${{ steps.pull-request.outputs.url }}
+    env:
+      GH_TOKEN: ${{ secrets.token || github.token }}
+      SKILL_DIR: ${{ inputs.dir }}
+      UNPIN: ${{ inputs.unpin }}
+      DRY_RUN: ${{ inputs.dry-run }}
+    steps:
+      # Upstream rather than ./actions/checkout: a relative `uses:` inside a
+      # reusable workflow resolves against the caller's repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.token || github.token }}
+
+      - name: Ensure gh 2.90.0 or newer (gh skill needs it)
+        run: |
+          set -euo pipefail
+          required=2.90.0
+          current=0
+          if command -v gh >/dev/null 2>&1; then
+            current="$(gh --version | head -n 1 | awk '{print $3}')"
+          fi
+          if [ "$(printf '%s\n' "$required" "$current" | sort -V | head -n 1)" != "$required" ]; then
+            echo "gh $current is older than $required; installing the current release from the official apt repository"
+            sudo mkdir -p -m 755 /etc/apt/keyrings
+            keyring="$(mktemp)"
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o "$keyring"
+            sudo install -m 644 "$keyring" /etc/apt/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+              | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+          gh --version
+          gh skill --help
+
+      # Always shown first so the log says what is about to change, and the
+      # only step that touches skills when dry-run is on.
+      - name: Preview available updates
+        run: |
+          set -euo pipefail
+          args=(--dry-run)
+          if [ -n "$SKILL_DIR" ]; then args+=(--dir "$SKILL_DIR"); fi
+          if [ "$UNPIN" = "true" ]; then args+=(--unpin); fi
+          log="$RUNNER_TEMP/gh-skill-update-dry-run.log"
+          gh skill update "${args[@]}" 2>&1 | tee "$log"
+          if [ "$DRY_RUN" = "true" ] && ! grep -Fq 'update(s) available' "$log"; then
+            echo "::error::dry-run found no skill to update; expected at least one update to be available"
+            exit 1
+          fi
+
+      - name: Update skills
+        if: inputs.dry-run != true
+        run: |
+          set -euo pipefail
+          args=(--all)
+          if [ -n "$SKILL_DIR" ]; then args+=(--dir "$SKILL_DIR"); fi
+          if [ "$UNPIN" = "true" ]; then args+=(--unpin); fi
+          gh skill update "${args[@]}"
+
+      # gh exits 0 whether or not it changed anything, so the working tree is
+      # the only reliable signal.
+      - name: Detect changes
+        id: changes
+        if: inputs.dry-run != true
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Every skill is already up to date."
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          else
+            git status --short
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # One line per skill, read from the metadata gh writes into SKILL.md:
+      #   <name> (<owner>/<repo>): <old ref> -> <new ref> (<old tree> -> <new tree>)
+      - name: Summarize the updates
+        if: steps.changes.outputs.updated == 'true'
+        run: |
+          set -euo pipefail
+          field() { sed -n "s/^[[:space:]]*$1:[[:space:]]*//p" | head -n 1; }
+          short_ref() { sed -e 's#^refs/tags/##' -e 's#^refs/heads/##'; }
+          summary="$RUNNER_TEMP/update-skills-summary.txt"
+          : > "$summary"
+          git diff --name-only | grep -E '(^|/)SKILL\.md$' | while IFS= read -r file; do
+            name="$(field name < "$file")"
+            repo="$(field github-repo < "$file" | sed 's#^https://github.com/##')"
+            old_ref="$(git show "HEAD:$file" | field github-ref | short_ref)"
+            new_ref="$(field github-ref < "$file" | short_ref)"
+            old_tree="$(git show "HEAD:$file" | field github-tree-sha | cut -c1-8)"
+            new_tree="$(field github-tree-sha < "$file" | cut -c1-8)"
+            echo "- $name ($repo): $old_ref -> $new_ref ($old_tree -> $new_tree)" >> "$summary"
+          done
+          if [ ! -s "$summary" ]; then
+            echo "- files changed without a SKILL.md metadata change; see the diff" >> "$summary"
+          fi
+          cat "$summary"
+
+      - name: Commit, push, and open or refresh the pull request
+        id: pull-request
+        if: steps.changes.outputs.updated == 'true'
+        env:
+          BRANCH: ${{ inputs.branch }}
+          BASE: ${{ github.ref_name }}
+          COMMIT_MESSAGE: ${{ inputs.commit-message }}
+          PR_TITLE: ${{ inputs.pr-title }}
+          LABELS: ${{ inputs.labels }}
+        run: |
+          set -euo pipefail
+          if [ "$BRANCH" = "$BASE" ]; then
+            echo "::error::branch '$BRANCH' is the branch this run checked out; choose another"
+            exit 1
+          fi
+          summary="$RUNNER_TEMP/update-skills-summary.txt"
+
+          message="$RUNNER_TEMP/commit-message.txt"
+          { echo "$COMMIT_MESSAGE"; echo; echo "Updated with gh skill update --all:"; echo; cat "$summary"; } > "$message"
+
+          body="$RUNNER_TEMP/pr-body.md"
+          {
+            echo "Updated with \`gh skill update --all\`. Unpinned skills follow the latest release of their source repository."
+            echo
+            cat "$summary"
+            echo
+            echo "Skills are not verified by GitHub; review the changed files before merging."
+          } > "$body"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add -A
+          git commit -F "$message"
+
+          # Fetch the remote branch so --force-with-lease has a lease to check;
+          # a missing branch is created on push.
+          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
+          git push --force-with-lease origin "HEAD:refs/heads/$BRANCH"
+
+          create_args=() edit_args=()
+          if [ -n "$LABELS" ]; then
+            create_args+=(--label "$LABELS")
+            edit_args+=(--add-label "$LABELS")
+          fi
+          url="$(gh pr list --head "$BRANCH" --base "$BASE" --state open --json url --jq '.[0].url // empty')"
+          if [ -z "$url" ]; then
+            url="$(gh pr create --base "$BASE" --head "$BRANCH" --title "$PR_TITLE" --body-file "$body" "${create_args[@]}")"
+          else
+            gh pr edit "$url" --title "$PR_TITLE" --body-file "$body" "${edit_args[@]}" >/dev/null
+          fi
+          echo "$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"

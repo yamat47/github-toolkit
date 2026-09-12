@@ -14,6 +14,8 @@ gh skill install yamat47/github-toolkit <skill-name>
 
 Skills are discovered automatically from `skills/<skill-name>/SKILL.md`. Without a version, `gh` installs the latest GitHub release; add `@v1.2.0` or `--pin v1.2.0` to pin a tag, or `--pin main` to follow the branch head. Use `--agent claude-code --scope user` to install for Claude Code globally.
 
+To keep installed skills current, `gh skill update --all` bumps every unpinned skill to the latest release of its source repository; the [`update-skills`](#reusable-workflows) reusable workflow runs that on a schedule and opens a pull request.
+
 This repository is intentionally not listed in the public skill catalog (`gh skill search`); it is meant for people who already know it exists.
 
 ### Use an action
@@ -101,14 +103,37 @@ Dependabot bumps every pin to each new upstream release.
 
 ### Reusable workflows
 
-(none yet)
+| Workflow | Does | Notes |
+|---|---|---|
+| [`update-skills`](.github/workflows/update-skills.yml) | Runs `gh skill update --all` in the calling repository and opens one pull request with whatever changed, refreshing it on later runs. | Skills installed with `--pin` are skipped unless `unpin: true`. Unpinned skills follow the latest GitHub release of their source repository, not its default branch. Needs `contents: write` and `pull-requests: write`. |
+
+```yaml
+# .github/workflows/update-skills.yml in a consuming repository
+name: Update skills
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    uses: yamat47/github-toolkit/.github/workflows/update-skills.yml@v1.2.0
+```
+
+Before the first run, enable "Allow GitHub Actions to create and approve pull requests" under Settings > Actions > General in the consuming repository; without it `gh pr create` is refused. Pull requests opened with the default `github.token` do not trigger the consumer's own CI, so pass a personal access token or GitHub App token as `secrets: { token: ... }` when the checks on the update PR matter. The token also needs read access to every source repository the skills come from.
+
+Optional inputs: `dir` (scan one directory instead of every agent host directory in project scope), `unpin`, `branch` (default `update-skills`, force-pushed on every run), `commit-message`, `pr-title`, `labels` (comma-separated, must already exist), and `dry-run`. Outputs: `updated` (`true`/`false`) and `pull-request-url` (empty when nothing changed). The commit and the PR body list each updated skill as `<name> (<owner>/<repo>): <old ref> -> <new ref>`.
+
+`dry-run: true` only reports and fails when no update is available; this repository's CI uses it against the frozen fixture in `tests/fixtures/installed-skills` to prove the workflow end to end.
 
 ## Layout
 
 ```
 skills/<name>/SKILL.md      # Skill (optionally with scripts/ references/ assets/)
 actions/<name>/action.yml   # Composite or JavaScript action (wrapper or recipe)
-tests/fixtures/             # Sample projects and recorded logs used by CI to exercise the actions
+tests/fixtures/             # Sample projects, recorded logs, and a frozen set of installed skills used by CI
 .github/workflows/          # Reusable workflows (workflow_call) and this repo's own CI
 .github/dependabot.yml      # Keeps SHA-pinned action references current
 docker/                     # Dockerfile for local tooling
