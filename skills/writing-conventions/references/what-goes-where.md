@@ -8,6 +8,7 @@ Follow Takuto Wada's division: code says **How**, test code says **What**, the c
 - Do not write what can be read from the code. No comments that narrate the operation (`# fetch the user`), no divider lines (`# ==== Validations ====`), no per-method summaries.
 - A workaround states its cause and the condition under which it can be removed. Link the issue or document if there is one.
 - When the code changes, change the comment. Delete comments that no longer match.
+- The detailed rules, including TODO and FIXME, comment form, and links, are in [code-comments.md](code-comments.md).
 
 ## Test names: What
 
