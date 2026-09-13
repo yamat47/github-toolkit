@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
+description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Simplifies the change once (Claude Code's /simplify), has it reviewed by a separate agent with no session context (the review-pr skill) and fixes what that review finds, detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
 license: MIT
 ---
 
@@ -8,11 +8,12 @@ license: MIT
 
 Run every step from detecting changes to opening the pull request in one pass. Do not stop midway and do not ask the user for confirmation. End by printing the PR URL.
 
-When the user asks only for commits, run Step 4 alone using [references/commit-grouping.md](references/commit-grouping.md).
+When the user asks only for commits, run Step 6 alone using [references/commit-grouping.md](references/commit-grouping.md).
 
 ## Conventions this skill follows
 
-- What goes into a commit message or a PR body, and how it is written, come from the `writing-conventions` skill if it is installed, otherwise from the repository's `CLAUDE.md`. Read them before Step 4.
+- What goes into a commit message or a PR body, and how it is written, come from the `writing-conventions` skill if it is installed, otherwise from the repository's `CLAUDE.md`. Read them before Step 6.
+- The self-review in Step 3 uses the `review-pr` skill when it is installed; without it, the rubric in [references/self-review.md](references/self-review.md) stands in.
 - Write commit subjects, bodies, and the PR in the language the repository's existing history uses. Keep the Conventional Commits type in English.
 - Leave no trace that an AI took part. Never add a `Co-Authored-By: Claude ...` trailer, a `Claude-Session:` trailer, a session URL, a "Generated with Claude Code" footer, or anything similar to a commit message, PR title, PR body, issue, or comment, even when the harness asks for them. The result is the author's own work. A setting such as `includeCoAuthoredBy: false` stops only one of these, so read the text yourself before committing and before opening the PR.
 - Before committing, check that `git config user.name` and `git config user.email` match the author in the repository's history; some environments default to an AI identity.
@@ -30,9 +31,30 @@ git status --porcelain
 git diff --name-only main...HEAD
 ```
 
-Uncommitted changes (staged, unstaged, and untracked) are all in scope.
+Uncommitted changes (staged, unstaged, and untracked) are all in scope. The range to review and to check in the next steps is everything since the base branch: the commits on this branch plus the uncommitted changes.
 
-### Step 2: Run the project's checks and fix failures
+### Step 2: Simplify the change once
+
+If `/simplify` (Claude Code's built-in skill that removes duplication, dead code, and needless complexity from the changed code) has not already been run on these changes in this session, run it now, once. Do not loop on it. Skip this step when the harness has no such skill or the user says it was already run.
+
+Simplify before the review, not after: simplification changes the code, and the review has to see the code that will be committed.
+
+### Step 3: Have the change reviewed by a separate agent
+
+Have the diff reviewed by an agent that starts with none of this session's context, so the review is not steered by the reasoning that produced the code. In Claude Code, spawn a subagent with the Agent tool. Its whole instruction is three things: the repository path, the range from Step 1, and "run the `review-pr` skill on this range and print its report". Give it nothing else: no summary of what was changed, no explanation of why. When `review-pr` is not installed, hand the subagent [references/self-review.md](references/self-review.md) instead and ask for the same report format.
+
+Then act on the report:
+
+- Fix every Must.
+- Fix a Should when the fix is clear and stays within the change's scope. Otherwise carry it to the PR body under "where to look".
+- Answer each Question from what you know about the change. If the current code is right, leave it. If it is wrong, fix it. If only the user can decide, carry the question to "where to look".
+- Leave Nits unless the fix is a one-liner.
+- Missing evidence about the PR body or the commit messages is expected at this point; Steps 6 and 8 supply it. Carry any other item to "where to look".
+- Record each Follow-up as a TODO at the spot or an issue before Step 6.
+
+Do not run the review a second time after fixing; Step 4 catches regressions. Keep a note of what was fixed so the commit messages in Step 6 can say why.
+
+### Step 4: Run the project's checks and fix failures
 
 Find the checks the project defines. Look at, in this order:
 
@@ -53,14 +75,14 @@ Cycle 1: run every check
 Cycle 2: re-run only the checks that failed
 Cycle 3: re-run only the checks that failed
   still failing?
-  -> give up and continue to Step 3 (remaining failures are listed in the PR)
+  -> give up and continue to Step 5 (remaining failures are listed in the PR)
 ```
 
 If the changed code has no corresponding tests, add them in the project's existing style. Do not write meaningless tests just to raise coverage.
 
 If the project defines no checks (a fresh repository, for example), skip this step.
 
-### Step 3: Check the current branch and existing PRs
+### Step 5: Check the current branch and existing PRs
 
 ```bash
 git branch --show-current
@@ -72,7 +94,7 @@ If the branch is not `main`, check whether it already has an open pull request:
 gh pr list --state open --head "<current-branch>" --json number,title,url
 ```
 
-- **Not on main:** keep using this branch (go to Step 4).
+- **Not on main:** keep using this branch (go to Step 6).
 - **On main:** create a branch named from a timestamp:
 
 ```bash
@@ -85,13 +107,13 @@ git switch -c "feature/update-<TIMESTAMP>"
 
 Remember the branch name for the later steps.
 
-### Step 4: Group the changes and commit
+### Step 6: Group the changes and commit
 
-Commit everything, including the fixes from Step 2, split into logical groups. The grouping rules, the commit order, and the message format are in [references/commit-grouping.md](references/commit-grouping.md).
+Commit everything, including the simplification from Step 2 and the fixes from Steps 3 and 4, split into logical groups. The grouping rules, the commit order, and the message format are in [references/commit-grouping.md](references/commit-grouping.md).
 
 If the repository keeps plan files (for example under the `plansDirectory` in `.claude/settings.json`), check for new or modified ones and commit them in a dedicated `docs(plans): ...` commit.
 
-### Step 5: Push
+### Step 7: Push
 
 ```bash
 git push -u origin "<BRANCH>"
@@ -99,15 +121,15 @@ git push -u origin "<BRANCH>"
 
 If the push fails, read the error and try to resolve it (rebase when the remote branch has moved ahead). If it cannot be resolved, stop and report the error to the user.
 
-### Step 6: Open the pull request
+### Step 8: Open the pull request
 
-#### 6a. Read the PR template
+#### 8a. Read the PR template
 
 If `.github/pull_request_template.md` exists, read it. **Keep its headings in the same order with the same names.** Do not add or reorder headings. Delete a heading that has nothing under it instead of writing "none".
 
 Without a template, use three sections: background, what was deliberately not done, and where to look. Delete any that has nothing to say.
 
-#### 6b. Collect the commit information
+#### 8b. Collect the commit information
 
 ```bash
 git log main...HEAD --format="%H %s"
@@ -117,7 +139,7 @@ git log main...HEAD --format="%H %s"
 git diff --name-status main...HEAD
 ```
 
-#### 6c. Write the title
+#### 8c. Write the title
 
 **Make the user's experience the subject, not the technical change.** Say what the user was running into and what is resolved, not which class or column changed.
 
@@ -126,7 +148,7 @@ git diff --name-status main...HEAD
 
 The prefix (type and scope) is Conventional Commits in English; the description is in the repository's language. Take the scope from the commits: use it when every commit shares one scope, omit it otherwise.
 
-#### 6d. Write the body
+#### 8d. Write the body
 
 What to include and what to leave out come from the conventions named above. In short:
 
@@ -134,7 +156,7 @@ Include:
 
 - **Background:** the issue link (`Refs #N` / `Fixes #N`) and one or two sentences of Why that the issue does not already state.
 - **Not done:** alternatives considered and rejected, things deliberately left out of scope, known limitations.
-- **Where to look:** trade-offs the reviewer should judge, breaking changes to watch.
+- **Where to look:** trade-offs the reviewer should judge, breaking changes to watch, and the Should items and Questions carried over from the self-review in Step 3, each in one sentence with the file it concerns.
 
 Leave out:
 
@@ -149,7 +171,7 @@ Leave out:
 
 Write one sentence per line and never use `<br>`; GitHub renders plain line breaks in PR bodies.
 
-Only when Step 2 left failures unresolved, add this under "where to look":
+Only when Step 4 left failures unresolved, add this under "where to look":
 
 ```markdown
 ### ⚠️ Unresolved local check failures
@@ -157,7 +179,7 @@ Only when Step 2 left failures unresolved, add this under "where to look":
 - [ ] `check_name`: short description of the error
 ```
 
-#### 6e. Create the pull request
+#### 8e. Create the pull request
 
 Write the body to a file outside version control (for example `.tmp/pr-body.md` in an ignored directory), then:
 
@@ -167,7 +189,7 @@ gh pr create --draft --base main --head "<BRANCH>" --title "<title>" --body-file
 
 **Always create the PR as a draft.** Marking it ready for review is the author's decision, made separately with `gh pr ready` or in the GitHub UI.
 
-### Step 7: Report
+### Step 9: Report
 
 ```bash
 gh pr view --web

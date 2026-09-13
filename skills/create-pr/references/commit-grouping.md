@@ -1,6 +1,6 @@
 # Grouping changes into commits
 
-Used by Step 4 of the create-pr skill, and on its own when the user asks only for commits.
+Used by Step 6 of the create-pr skill, and on its own when the user asks only for commits.
 
 ## 1. Analyze all changes
 

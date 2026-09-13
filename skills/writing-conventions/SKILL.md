@@ -6,10 +6,11 @@ license: MIT
 
 # Writing conventions
 
-Two references, read the one you need:
+Three references, read the one you need:
 
 - [references/what-goes-where.md](references/what-goes-where.md) decides **what belongs in a code comment, a test name, a commit message, or a pull request**, following Takuto Wada's rule: code says How, tests say What, the commit log says Why, and code comments say Why not. Never write the same thing in two places.
 - [references/writing-style.md](references/writing-style.md) sets the **prose style**: sentence shape, expressions to avoid, and structure.
+- [references/code-comments.md](references/code-comments.md) details **code comments**: what a comment must add and must not contain, TODO and FIXME, form, links, and what belongs in a runbook, lint config, or schema instead.
 
 Formats such as Conventional Commits prefixes or a PR template are owned by the repository or by the skill that writes the text; this skill only governs what is said and how.
 
