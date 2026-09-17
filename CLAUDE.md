@@ -61,3 +61,10 @@ Some skills are copied from other repositories (see the Upstream column in READM
 Refresh them with `tools/vendor-skill.sh OWNER/REPO PATH REF`, re-apply the `license:` frontmatter
 line if upstream lacks it, and update the recorded commit in README.md. Do not hand-edit vendored
 skill bodies; changes belong upstream.
+
+The `databricks-*` skills come from databricks/databricks-agent-skills and are refreshed together from
+one upstream tag (`tools/vendor-skill.sh databricks/databricks-agent-skills skills/databricks-<name> vX.Y.Z`
+per directory). After refreshing: copy the upstream root `LICENSE` and `NOTICE` into each directory as
+`LICENSE.txt` and `NOTICE.txt`, add `license: LicenseRef-Databricks`, and move the top-level `parent:` key
+under `metadata:` (the Agent Skills validator rejects it at the top level). Record the tag and commit in
+README.md. The Databricks License is not open source; it is redistributable only for use with Databricks.
