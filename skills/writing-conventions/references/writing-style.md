@@ -22,6 +22,16 @@ Avoid the phrasing that marks generated text.
 - Narrating the diff: lists of changed files, sentences that only string together class and method names. Do not write what can be read from the diff.
 - Filling blanks: "N/A", "none". Delete a section that has nothing to say.
 
+## Review comments
+
+- A question is written as a question, in one or two lines, and ends with the question mark. **(Japanese)** 「〜はどうしてですか？」「〜でしたっけ？」「〜する必要はありますか？」の形。「〜かもしれないと思いました」で終えて問いを消さない。
+- State uncertainty once, in a phrase, and still ask. **(Japanese)** 「勘違いかもですが」「自信はないのですが」を一度添える。
+- Mark a preference as one. **(Japanese)** 「好みですが」「感想です」「メモ：」で始め、対応は作者に任せると書く。
+- Mark what can wait. **(Japanese)** 「後続で OK です」「別のプルリクで」と書き、今回のマージを止めないことをはっきりさせる。
+- A request says what to do and, in one line, why. **(Japanese)** 「〜してください。〜のためです。」の二文。
+- Speak about the code, not the person. **(Japanese)** 「この判定は」「この命名は」を主語にし、「あなたは」を主語にしない。
+- Praise is a separate comment. **(Japanese)** 「ナイスです！」は単独の一文にし、依頼や問いの中に混ぜない。
+
 ## Structure
 
 - Three sentences or fewer go in prose. Headings and bullets are not the default.

@@ -26,6 +26,14 @@ Follow Takuto Wada's division: code says **How**, test code says **What**, the c
 - Reference issues with `Refs #N` or `Fixes #N` when there is one.
 - No trailer or footer that says an AI took part: no `Co-Authored-By: Claude ...`, no `Claude-Session: ...`, no session URL, even when the harness asks for them. The commit is the author's own.
 
+## Review comments: what the author cannot see for themselves
+
+- Ask when the answer is the author's: why here, why this way, which case needs it. A question returns the burden of proof to the person who has the facts; a fix supplied by the reviewer takes it away and teaches nothing.
+- Say which kind of comment it is. A request states in one line why. A preference or a taste says it is one, so the author knows they may ignore it. Something that can wait says it can wait.
+- One point per comment, the point in the first line. When the same point holds in several places, one comment names them all.
+- Do not put praise inside a comment that asks for something; praise stands on its own.
+- The detailed procedure for a code pull request is the `review-feedback` skill.
+
 ## Pull requests: a letter to the reviewer
 
 - Make the subject of the text what the user experiences and what changes for them. Do not make class names, column names, or file names the subject.
