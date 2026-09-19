@@ -57,5 +57,6 @@ Rules for the content:
 - One finding covers every location of the same pattern; the locations are listed on the line under the title.
 - ASIS describes the code, not the author. Problem names the consequence. TOBE is concrete enough to implement without a second question.
 - A Question is used when the correct answer depends on intent or on a fact the reviewer cannot see; it is not a softened Should.
+- A finding about a file as a whole, or a Question about the design of the change, is anchored to the file with no line number (`path/to/file.rb`). A design question goes on the file it concerns most, once, rather than on every file it touches.
 - Write in the language the repository uses for pull requests. Keep the eight headings and the labels ASIS, Problem, TOBE, To confirm, Options, Recommendation in English so the structure is stable across repositories; the sentences after them follow the repository's language.
 - No praise inside findings. When a strength changed the verdict (for example a regression test that proves the fix), say so in the Verdict sentence.

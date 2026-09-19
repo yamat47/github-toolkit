@@ -25,7 +25,7 @@ Missing items go under "Missing evidence". The list is about what the author sho
 - The repository's `CLAUDE.md`, rules, or a linked decision explicitly chooses the pattern you would flag.
 - The problem exists outside the diff and the change does not make it worse. At most a follow-up.
 - The finding is a preference (a knowledge skill marks preferences as such) and the codebase consistently does otherwise. Preferences become Nits at most.
-- The finding is a "might" or "could" without a concrete scenario. Keep it only when the consequence would be data loss, exposure of personal data, or a state with no correction path, and then phrase it as a Question with the scenario spelled out.
+- The finding is a "might" or "could" without a concrete scenario. When you can name the scenario (the input, the order of events, the data that would have to exist), keep it as a Question that states the scenario and what you could not confirm; a concrete "does this break when X?" is what a reviewer would ask. Drop it only when no scenario can be named.
 
 ## Severity
 
