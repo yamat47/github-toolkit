@@ -99,6 +99,6 @@ Print the comments in the format of [references/comment-format.md](references/co
 1. One point. A comment that says "also", "same for", "while here", or whose second sentence is about a different line, identifier, or file, is two comments. Split it into two entries; never drop one to make the other fit. One comment may name several places only when it is the same point at each.
 2. A question ends at its question mark. Delete the sentence that follows it, or make the comment a request. "Which case is this for? As it stands X cannot happen." is a question with an answer appended; keep the question.
 3. Nothing a linter or formatter reports. Trailing whitespace, a blank line at the end of a file, indentation, an unused variable or assignment, a missing trailing comma: delete the comment. The reviewer never posts these, however the change looks.
-4. Four lines. A comment longer than that carries narration of the code; cut the narration, keep the point and its reason.
+4. No narration. A comment that walks through what the code does before or after its point carries narration; cut it, keep the point and its reason.
 
 Then read what is left once more as the author will: each comment should be answerable or actionable in a reply, and none should need the reviewer to have read the code aloud first. When the caller asks for structured output, map the sections as [references/structured-output.md](references/structured-output.md) describes; the same file is used by tools that turn the comments into review threads.

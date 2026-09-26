@@ -66,19 +66,3 @@ git status --porcelain
 ```
 
 When this reference was entered from create-pr, return to that workflow immediately after the summary.
-
-## Example
-
-```bash
-# Group 1: schema
-git add db/migrate/20250123_add_fields_to_users.rb db/schema.rb
-git commit -m "feat(db): add email and phone_number to users"
-
-# Group 2: business logic with its spec
-git add app/models/user.rb spec/models/user_spec.rb
-git commit -m "feat(models): validate the format of user email"
-
-# Group 3: UI
-git add app/views/users/edit.html.erb
-git commit -m "feat(views): add the email field to the user edit form"
-```
