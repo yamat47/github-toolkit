@@ -45,7 +45,7 @@ Any kind can carry `deferrable`: fine in a follow-up PR. Say so in the heading, 
 
 ## The text
 
-- The first line is the point. What follows is the reason or the case, in one to three more lines; the whole comment is two to four lines as posted, under forty words unless a `suggestion` block carries the code. A comment longer than that is usually two comments, or narration of the code that the author does not need.
+- The first line is the point. What follows is only the reason or the case, so the comment reads in one glance as posted; a `suggestion` block carries any code. A comment that needs more is usually two comments, or narration of the code that the author does not need. When the examples file exists, its comments set the length.
 - One point per comment. When the same point holds in several places, one comment names every place.
 - A question ends with the question. Do not wrap it in paragraphs of hedging; state uncertainty once, in a phrase.
 - A request names the alternative. When replacement code is clearer than prose, use a `suggestion` block for exactly the lines it replaces.
