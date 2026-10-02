@@ -68,3 +68,10 @@ per directory). After refreshing: copy the upstream root `LICENSE` and `NOTICE` 
 `LICENSE.txt` and `NOTICE.txt`, add `license: LicenseRef-Databricks`, and move the top-level `parent:` key
 under `metadata:` (the Agent Skills validator rejects it at the top level). Record the tag and commit in
 README.md. The Databricks License is not open source; it is redistributable only for use with Databricks.
+
+`test-audit` is an adapter: `skills/test-audit/SKILL.md` is this repository's own text and the upstream
+rules live under `skills/test-audit/references/upstream/`. Refresh it with
+`tools/vendor-skill.sh openclaw/openclaw .agents/skills/test-audit vX.Y.Z skills/test-audit/references/upstream`.
+The fourth argument is required: without it the script deletes the adapter. Then copy the upstream root
+`LICENSE` to `skills/test-audit/LICENSE.txt`, check the translation table in `SKILL.md` against the new text,
+and record the tag and commit in README.md.
