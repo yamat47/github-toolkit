@@ -14,6 +14,7 @@ When the user asks only for commits, run Step 6 alone using [references/commit-g
 
 - What goes into a commit message or a PR body, and how it is written, come from the `writing-conventions` skill if it is installed, otherwise from the repository's `CLAUDE.md`. Read them before Step 6.
 - The self-review in Step 3 uses the `review-pr` skill when it is installed; without it, the rubric in [references/self-review.md](references/self-review.md) stands in.
+- Tests written or changed after the Step 3 review pass through the `test-audit` skill's authoring gate in Step 4 when it is installed; when `review-pr` ran in Step 3, it has already applied the gate to the rest of the diff.
 - Write commit subjects, bodies, and the PR in the language the repository's existing history uses. Keep the Conventional Commits type in English.
 - Leave no trace that an AI took part. Never add a `Co-Authored-By: Claude ...` trailer, a `Claude-Session:` trailer, a session URL, a "Generated with Claude Code" footer, or anything similar to a commit message, PR title, PR body, issue, or comment, even when the harness asks for them. The result is the author's own work. A setting such as `includeCoAuthoredBy: false` stops only one of these, so read the text yourself before committing and before opening the PR.
 - Before committing, check that `git config user.name` and `git config user.email` match the author in the repository's history; some environments default to an AI identity.
@@ -78,7 +79,7 @@ Cycle 3: re-run only the checks that failed
   -> give up and continue to Step 5 (remaining failures are listed in the PR)
 ```
 
-If the changed code has no corresponding tests, add them in the project's existing style. Do not write meaningless tests just to raise coverage.
+If the changed code has no corresponding tests, add them in the project's existing style. Do not write meaningless tests just to raise coverage. When the `test-audit` skill is installed, run its authoring gate on the tests written or changed since the Step 3 review, including the ones written here, and fix or drop what fails it. When Step 3 ran without `review-pr`, run the gate on every test the diff adds or changes.
 
 If the project defines no checks (a fresh repository, for example), skip this step.
 
