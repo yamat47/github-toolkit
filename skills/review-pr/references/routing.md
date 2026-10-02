@@ -13,7 +13,7 @@ The repository's own rules (`CLAUDE.md`, `AGENTS.md`, `.claude/rules/`) apply to
 | `app/views/**`, `app/components/**`, `app/helpers/**` | `rails-idioms`, `rails-safety` | Logic in templates, i18n of user-facing strings, HTML over JavaScript |
 | `app/jobs/**`, `lib/tasks/**` | `rails-safety` | Retries, fan-out, idempotency, task side effects and arguments, environment guards |
 | Other `app/**/*.rb`, `lib/**/*.rb`, `config/**/*.rb` | `rails-safety`, `rails-idioms` | Correctness, error paths, object design, naming, `lib/` versus `app/` |
-| `spec/**`, `test/**`, `spec/factories/**` | `rails-idioms` | Factory randomness, structure, literal expectations, the failing test for a bug fix |
+| `spec/**`, `test/**`, `tests/**`, `__tests__/**`, `*.test.*`, `*.spec.*`, `*_test.go`, `spec/factories/**` | `test-audit`, plus `rails-idioms` for RSpec | The `test-audit` authoring gate and junk patterns on each added or changed test; the failing test for a bug fix. For RSpec also factory randomness, structure, literal expectations |
 | `config/locales/**` | `rails-safety` | Keys matching `errors.add` symbols and view lookups |
 | `Gemfile`, `Gemfile.lock`, `package.json`, lock files | `rails-safety` | Pins, branch or SHA sources, version bumps of shared gems (a PR that is only a dependency update never reaches this table; see Target in `SKILL.md`) |
 | `**/*.ts`, `**/*.tsx`, `**/*.vue`, `tsconfig*.json`, `eslint.config.*`, `biome.json` | `typescript-idioms`, plus `vue-patterns` for `.vue` files and Nuxt projects, `react-patterns` for `.tsx`, Next.js, and React Native projects | Types and `any`, promise handling, schema-derived types, generated API clients; component splitting, props flow, state locality, effects and watchers, server versus client boundaries |
