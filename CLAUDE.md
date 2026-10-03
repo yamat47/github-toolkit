@@ -44,6 +44,11 @@ The `create-pr` and `writing-conventions` skills in this repository carry the sa
 
 - Language: English everywhere (files, commit messages, comments).
 - Skills live in `skills/<name>/SKILL.md`; the directory name must equal the frontmatter `name`.
+- The skills this repository uses on itself are relative symlinks in `.claude/skills/` pointing at
+  `skills/<name>`. Add one with `ln -s ../../skills/<name> .claude/skills/<name>`; never
+  `gh skill install` into `.claude/skills/`, which would commit a second copy that drifts.
+  Link only skills that have work to do here: the repository has no test suite and no
+  application code, so `test-audit` and the language and framework skills are not linked.
 - Actions live in `actions/<name>/action.yml`; reusable workflows in `.github/workflows/`.
 - Wrapper actions pin upstream to a full commit SHA with a `# vX.Y.Z` comment; Dependabot
   (`.github/dependabot.yml`) bumps those pins. Never pin to a floating tag inside this repo.
