@@ -16,6 +16,7 @@ concurrency:
 # Every action under actions/ has an end-to-end job here. Besides proving the
 # action runs, `uses: ./actions/<name>` lets actionlint check the inputs each
 # job passes against the action's declared inputs (see `make lint-workflows`).
+# The deploy-pages job is the exception: it is skipped by default (see its job).
 jobs:
   lint:
     name: Lint (same checks as `make lint`)
@@ -152,6 +153,57 @@ jobs:
           test -n "$ARTIFACT_ID"
           test -n "$ARTIFACT_URL"
           test -n "$ARTIFACT_DIGEST"
+
+  test-upload-pages-artifact-action:
+    name: actions/upload-pages-artifact wrapper end-to-end
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.name.outputs.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: mkdir -p pages-smoke && echo "<!doctype html><title>$GITHUB_SHA</title>" > pages-smoke/index.html
+      - id: name
+        run: echo "name=pages-smoke-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - id: upload
+        uses: ./actions/upload-pages-artifact
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: pages-smoke
+      - name: Assert the output is set
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact_id }}
+        run: |
+          set -eux
+          test -n "$ARTIFACT_ID"
+
+  # Deploying needs GitHub Pages enabled with "GitHub Actions" as the source,
+  # which this repository does not have by default. The job is skipped unless
+  # the repository variable PAGES_E2E is "true"; actionlint still checks the
+  # inputs and outputs against the wrapper either way.
+  test-deploy-pages-action:
+    name: actions/deploy-pages wrapper end-to-end (only when PAGES_E2E is set)
+    needs: test-upload-pages-artifact-action
+    if: vars.PAGES_E2E == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # checks out the wrapper
+      pages: write # creates the Pages deployment
+      id-token: write # deploy-pages proves the deployment's origin with OIDC
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: deploy
+        uses: ./actions/deploy-pages
+        with:
+          artifact_name: ${{ needs.test-upload-pages-artifact-action.outputs.artifact-name }}
+      - name: Assert the output is set
+        env:
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+        run: |
+          set -eux
+          test -n "$PAGE_URL"
 
   test-pnpm-and-playwright-recipes:
     name: setup-node-with-pnpm + setup-playwright-chromium end-to-end
