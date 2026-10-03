@@ -1,0 +1,54 @@
+name: Deploy GitHub Pages site
+description: >-
+  Thin wrapper around actions/deploy-pages pinned to a full commit SHA.
+  Consumers reference this repository once and receive upstream updates
+  whenever the pin here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror actions/deploy-pages v5 exactly (names, defaults,
+# descriptions abridged). See https://github.com/actions/deploy-pages.
+# A composite action silently drops inputs it does not declare, so every
+# upstream input is listed even when this repository never uses it.
+# The calling job needs `pages: write` and `id-token: write`, as with upstream.
+inputs:
+  token:
+    description: GitHub token. Defaults to GITHUB_TOKEN.
+    required: true
+    default: ${{ github.token }}
+  timeout:
+    description: Time in milliseconds after which to time out and cancel the deployment.
+    default: "600000"
+  error_count:
+    description: Maximum number of status report errors before cancelling a deployment.
+    default: "10"
+  reporting_interval:
+    description: >-
+      Initial time in milliseconds between deployment status reports. Successful
+      polls back off with a cap and jitter; error backoff is added separately.
+    default: "5000"
+  artifact_name:
+    description: Name of the artifact to deploy.
+    default: github-pages
+  preview:
+    description: >-
+      Deploy a pull request as a GitHub Pages preview site. Alpha upstream and
+      not available to the public.
+    default: "false"
+
+outputs:
+  page_url:
+    description: URL of the deployed GitHub Pages site.
+    value: ${{ steps.deploy.outputs.page_url }}
+
+runs:
+  using: composite
+  steps:
+    - id: deploy
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      with:
+        token: ${{ inputs.token }}
+        timeout: ${{ inputs.timeout }}
+        error_count: ${{ inputs.error_count }}
+        reporting_interval: ${{ inputs.reporting_interval }}
+        artifact_name: ${{ inputs.artifact_name }}
+        preview: ${{ inputs.preview }}

@@ -89,6 +89,8 @@ Thin wrappers pin one upstream action to a full commit SHA and mirror its inputs
 | [`actions/setup-pnpm`](actions/setup-pnpm) | [pnpm/action-setup](https://github.com/pnpm/action-setup) | Same inputs and outputs as upstream. |
 | [`actions/cache`](actions/cache) | [actions/cache](https://github.com/actions/cache) | Same inputs and outputs as upstream, minus the deprecated `save-always`. |
 | [`actions/upload-artifact`](actions/upload-artifact) | [actions/upload-artifact](https://github.com/actions/upload-artifact) | Same inputs and outputs as upstream. |
+| [`actions/upload-pages-artifact`](actions/upload-pages-artifact) | [actions/upload-pages-artifact](https://github.com/actions/upload-pages-artifact) | Same inputs and outputs as upstream. |
+| [`actions/deploy-pages`](actions/deploy-pages) | [actions/deploy-pages](https://github.com/actions/deploy-pages) | Same inputs and outputs as upstream. The job needs `pages: write` and `id-token: write`. |
 | [`actions/setup-node-with-pnpm`](actions/setup-node-with-pnpm) | pnpm/action-setup + actions/setup-node + `pnpm install` | Recipe. pnpm version from `packageManager`, pnpm store cached, `--frozen-lockfile` by default. |
 | [`actions/setup-playwright-chromium`](actions/setup-playwright-chromium) | actions/cache + `playwright install` | Recipe. Installs Chromium for the Playwright version the project depends on; browser download cached per version. |
 | [`actions/undercover`](actions/undercover) | [undercover](https://github.com/grodowski/undercover) + `gh` | Recipe. Runs diff coverage after the tests, annotates untested lines, keeps one sticky PR comment. Never fails the job; read the `status` output. |

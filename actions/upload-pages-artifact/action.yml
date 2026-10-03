@@ -1,0 +1,43 @@
+name: Upload GitHub Pages artifact
+description: >-
+  Thin wrapper around actions/upload-pages-artifact pinned to a full commit SHA.
+  Consumers reference this repository once and receive upstream updates
+  whenever the pin here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror actions/upload-pages-artifact v5 exactly (names, defaults,
+# descriptions abridged). See https://github.com/actions/upload-pages-artifact.
+# A composite action silently drops inputs it does not declare, so every
+# upstream input is listed even when this repository never uses it.
+inputs:
+  name:
+    description: Artifact name.
+    default: github-pages
+  path:
+    description: Path of the directory containing the static assets.
+    required: true
+    default: _site/
+  retention-days:
+    description: Days until the artifact expires.
+    default: "1"
+  include-hidden-files:
+    description: >-
+      Include hidden files and directories (those starting with a dot) in the
+      artifact. .git and .github are excluded regardless.
+    default: "false"
+
+outputs:
+  artifact_id:
+    description: The ID of the artifact that was uploaded.
+    value: ${{ steps.upload.outputs.artifact_id }}
+
+runs:
+  using: composite
+  steps:
+    - id: upload
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        retention-days: ${{ inputs.retention-days }}
+        include-hidden-files: ${{ inputs.include-hidden-files }}
