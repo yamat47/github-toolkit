@@ -162,7 +162,10 @@ tests/fixtures/             # Sample projects, recorded logs, and a frozen set o
 docker/                     # Dockerfile for local tooling
 compose.yaml, Makefile      # Local tooling entrypoints (everything runs in Docker)
 tools/                      # Maintenance scripts for this repo (not distributed)
+.claude/skills/<name>       # Symlinks to skills/<name>: the skills this repo uses on itself
 ```
+
+The skills this repository uses for its own development are symlinked from `.claude/skills/` rather than installed with `gh skill install`, so an edit under `skills/` takes effect immediately and no second copy can drift. `gh skill publish --dry-run` warns that `.claude/skills/` should be in `.gitignore`; that warning is about other authors' content and does not apply to links into this repository.
 
 ## Development
 
