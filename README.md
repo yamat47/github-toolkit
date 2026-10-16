@@ -150,9 +150,11 @@ jobs:
     uses: yamat47/github-toolkit/.github/workflows/update-skills.yml@v1.2.0
 ```
 
-Before the first run, enable "Allow GitHub Actions to create and approve pull requests" under Settings > Actions > General in the consuming repository; without it `gh pr create` is refused. Pull requests opened with the default `github.token` do not trigger the consumer's own CI, so pass a personal access token or GitHub App token as `secrets: { token: ... }` when the checks on the update PR matter. The token also needs read access to every source repository the skills come from.
+Before the first run, enable "Allow GitHub Actions to create and approve pull requests" under Settings > Actions > General in the consuming repository; without it `gh pr create` is refused. Pull requests opened with the default `github.token` do not trigger the consumer's own CI, so pass a GitHub App token (or a personal access token) as `secrets: { token: ... }` when the checks on the update PR matter. The token also needs read access to every source repository the skills come from.
 
-Optional inputs: `dir` (scan one directory instead of every agent host directory in project scope), `unpin`, `branch` (default `update-skills`, force-pushed on every run), `commit-message`, `pr-title`, `labels` (comma-separated, must already exist), and `dry-run`. Outputs: `updated` (`true`/`false`) and `pull-request-url` (empty when nothing changed). The commit and the PR body list each updated skill as `<name> (<owner>/<repo>): <old ref> -> <new ref>`.
+The commit is created through the Git Database API rather than pushed, with file modes such as executable scripts kept. GitHub signs it, so it shows as Verified, when the token is `github.token` or a GitHub App token; a GitHub App token therefore both triggers CI and keeps the commit verified. A personal access token may leave it unverified, and the run logs a warning when that happens.
+
+Optional inputs: `dir` (scan one directory instead of every agent host directory in project scope), `unpin`, `branch` (default `update-skills`, reset to a new commit on every run), `commit-message`, `pr-title`, `labels` (comma-separated, must already exist), and `dry-run`. Outputs: `updated` (`true`/`false`) and `pull-request-url` (empty when nothing changed). The commit and the PR body list each updated skill as `<name> (<owner>/<repo>): <old ref> -> <new ref>`.
 
 `dry-run: true` only reports and fails when no update is available; this repository's CI uses it against the frozen fixture in `tests/fixtures/installed-skills` to prove the workflow end to end.
 

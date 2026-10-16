@@ -28,7 +28,7 @@ on:
         type: boolean
         default: false
       branch:
-        description: Branch the pull request is opened from. Force-pushed on every run.
+        description: Branch the pull request is opened from. Reset to a new commit on every run.
         type: string
         default: update-skills
       commit-message:
@@ -46,12 +46,12 @@ on:
     secrets:
       token:
         description: >-
-          Token used to check out, push, and open the pull request. Defaults to
+          Token used to check out, create the commit and branch, and open the pull request. Defaults to
           `github.token`, whose pull requests do not trigger the caller's CI.
         required: false
     outputs:
       updated:
-        description: "`true` when at least one skill was updated and pushed, otherwise `false`."
+        description: "`true` when at least one skill was updated and committed, otherwise `false`."
         value: ${{ jobs.update.outputs.updated }}
       pull-request-url:
         description: URL of the created or refreshed pull request; empty when nothing changed.
@@ -74,6 +74,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ secrets.token || github.token }}
+          # Nothing runs git against the remote; gh authenticates through GH_TOKEN.
+          persist-credentials: false
 
       - name: Ensure gh 2.90.0 or newer (gh skill needs it)
         run: |
@@ -160,45 +162,90 @@ jobs:
           fi
           cat "$summary"
 
-      - name: Commit, push, and open or refresh the pull request
-        id: pull-request
+      # The commit is built through the Git Database API instead of
+      # `git commit` + `git push`: GitHub signs a commit that a GitHub App or
+      # github.token creates there without an explicit author, so it shows as
+      # Verified. The tree API keeps file modes, so executable scripts and
+      # symlinks survive (GraphQL createCommitOnBranch drops them).
+      - name: Create a signed commit on the branch
         if: steps.changes.outputs.updated == 'true'
         env:
           BRANCH: ${{ inputs.branch }}
           BASE: ${{ github.ref_name }}
           COMMIT_MESSAGE: ${{ inputs.commit-message }}
-          PR_TITLE: ${{ inputs.pr-title }}
-          LABELS: ${{ inputs.labels }}
         run: |
           set -euo pipefail
           if [ "$BRANCH" = "$BASE" ]; then
             echo "::error::branch '$BRANCH' is the branch this run checked out; choose another"
             exit 1
           fi
-          summary="$RUNNER_TEMP/update-skills-summary.txt"
-
           message="$RUNNER_TEMP/commit-message.txt"
-          { echo "$COMMIT_MESSAGE"; echo; echo "Updated with gh skill update --all:"; echo; cat "$summary"; } > "$message"
+          { echo "$COMMIT_MESSAGE"; echo; echo "Updated with gh skill update --all:"; echo; cat "$RUNNER_TEMP/update-skills-summary.txt"; } > "$message"
 
+          api="repos/$GITHUB_REPOSITORY/git"
+          git add -A
+          # Each raw record is ":<old mode> <new mode> <old sha> <new sha> <status>\0<path>\0".
+          # Blobs are read from the index, so a symlink uploads its target path.
+          # Content that did not change (a mode-only change) is already on GitHub.
+          tree="$(git diff --cached --raw --no-abbrev --no-renames -z \
+            | while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
+                read -r _ mode old_sha sha status <<< "$meta"
+                if [ "$status" != D ] && [ "$sha" != "$old_sha" ]; then
+                  git cat-file blob "$sha" | base64 -w0 \
+                    | jq -Rs '{content: ., encoding: "base64"}' \
+                    | gh api "$api/blobs" --input - --silent
+                fi
+                jq -cn --arg path "$path" --arg mode "$mode" --arg sha "$sha" --arg status "$status" \
+                  'if $status == "D" then {path: $path, mode: "100644", type: "blob", sha: null}
+                   else {path: $path, mode: $mode, type: "blob", sha: $sha} end'
+              done \
+            | jq -s --arg base "$(git rev-parse 'HEAD^{tree}')" '{base_tree: $base, tree: .}' \
+            | gh api "$api/trees" --input - --jq .sha)"
+          # Object IDs are content hashes, so the remote tree must equal the index.
+          # This is also the guard for a failed blob upload inside the pipeline above.
+          staged="$(git write-tree)"
+          if [ "$tree" != "$staged" ]; then
+            echo "::error::tree $tree created through the API does not match the staged tree $staged"
+            exit 1
+          fi
+
+          # No author or committer: setting either stops GitHub from signing.
+          created="$(gh api "$api/commits" -F "message=@$message" -f "tree=$tree" -f "parents[]=$(git rev-parse HEAD)" \
+            --jq '"\(.sha) \(.verification.verified) \(.verification.reason)"')"
+          read -r commit verified reason <<< "$created"
+
+          # The branch is reset to the new commit on every run; it is created on the first.
+          # matching-refs is a prefix match, so the exact ref is selected.
+          if [ -n "$(gh api "$api/matching-refs/heads/$BRANCH" --jq ".[] | select(.ref == \"refs/heads/$BRANCH\") | .ref")" ]; then
+            gh api -X PATCH "$api/refs/heads/$BRANCH" -f "sha=$commit" -F force=true --silent
+          else
+            gh api "$api/refs" -f "ref=refs/heads/$BRANCH" -f "sha=$commit" --silent
+          fi
+
+          if [ "$verified" = true ]; then
+            echo "Commit $commit is signed by GitHub."
+          else
+            echo "::warning::commit $commit is not verified ($reason); GitHub signs commits created with github.token or a GitHub App token"
+          fi
+
+      - name: Open or refresh the pull request
+        id: pull-request
+        if: steps.changes.outputs.updated == 'true'
+        env:
+          BRANCH: ${{ inputs.branch }}
+          BASE: ${{ github.ref_name }}
+          PR_TITLE: ${{ inputs.pr-title }}
+          LABELS: ${{ inputs.labels }}
+        run: |
+          set -euo pipefail
           body="$RUNNER_TEMP/pr-body.md"
           {
             echo "Updated with \`gh skill update --all\`. Unpinned skills follow the latest release of their source repository."
             echo
-            cat "$summary"
+            cat "$RUNNER_TEMP/update-skills-summary.txt"
             echo
             echo "Skills are not verified by GitHub; review the changed files before merging."
           } > "$body"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
-          git add -A
-          git commit -F "$message"
-
-          # Fetch the remote branch so --force-with-lease has a lease to check;
-          # a missing branch is created on push.
-          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
-          git push --force-with-lease origin "HEAD:refs/heads/$BRANCH"
 
           create_args=() edit_args=()
           if [ -n "$LABELS" ]; then
