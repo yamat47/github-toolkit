@@ -10,7 +10,7 @@ This skill is the procedure for one dependency-update pull request: a bot PR fro
 
 ## Target
 
-- A PR number or URL: read it with `gh pr view <n> --json title,body,author,labels,files,baseRefName,headRefName` and `gh pr diff <n>`. The author `app/dependabot` or `app/renovate` marks a bot PR.
+- A PR number or URL: read it with `gh pr view <n> --json title,body,author,labels,files,baseRefName,headRefName,mergeable` and `gh pr diff <n>`. The author `app/dependabot` or `app/renovate` marks a bot PR.
 - Nothing: the current branch against its base, when the diff only changes dependency versions in a manifest or lockfile (`Gemfile`, `Gemfile.lock`, `package.json`, a JS lockfile, `.github/workflows/*.yml`, `action.yml`, a `Dockerfile`, `.terraform.lock.hcl`).
 
 Run each `gh` and `git` command as its own Bash call so permission rules can match on the command prefix. Run the repository's package manager only for read-only queries (`bundle info`, `npm explain`, `pnpm why`); do not install, update, or push.
@@ -33,7 +33,8 @@ The title names one package; the lockfile tells what moved.
 
 - List every locked package whose version changed, with before and after. The reference names the lockfile sections to read for each ecosystem. Each of them gets a line in "What changed" and, when the move is more than a patch, a changelog check in Step 3.
 - Compare the manifest change with the lockfile change. A manifest bump the lockfile does not reflect, or a lockfile move that the manifest's pin does not allow, is a finding.
-- Compare the lockfile against the tip of the default branch, not only against the PR base commit: fetch the PR head, then `git diff origin/<default> <head> -- <lockfile>`. Any package that moved backwards means the bot branch was built on a stale lockfile; the verdict is Hold and the follow-up is to recreate the PR.
+- Read the lockfile change the PR itself makes, from the commit it branched from: fetch the PR head, then `git diff origin/<default>...<head> -- <lockfile>` (three dots). A merge applies only this change on top of the default branch, so a package the default branch moved after the PR branched keeps the default branch's version. The two-dot diff `git diff origin/<default> <head>` shows such a package as moving backwards although the merge leaves it alone; it is not evidence of a downgrade. A package that moves backwards in the three-dot diff is a downgrade the PR makes; the verdict is Hold and the follow-up is to recreate the PR.
+- For a PR, read `mergeable` from Target. `CONFLICTING` means the lockfile has to be rebuilt on the tip of the default branch, so the verdict is at best `Merge after` the bot rebases the branch. `UNKNOWN` means GitHub has not computed it yet; read it again.
 - Read requirement changes in the diff and in the package metadata: `engines`, `peerDependencies`, `required_ruby_version`, `PLATFORMS` and `RUBY VERSION` in `Gemfile.lock`, `runs.using` in `action.yml`, the base-image OS in a `FROM` line, the `constraints` line in `.terraform.lock.hcl`. Check each against what the repository runs (`.ruby-version`, `.node-version` or `engines`, the CI runner image, the Dockerfile).
 - For an Action bump, confirm that the commit SHA in `uses:` is the commit the version comment names and that the tag is a published release (`gh api repos/O/R/git/ref/tags/vX`). A SHA that points at a branch head under a stale comment is a finding.
 
@@ -90,7 +91,7 @@ Four verdicts, each meaning one thing:
 
 - `Merge`: every relevant upstream change in the range was read, none is reached by this codebase or the reached ones are covered by a check that ran green, and no signal is red.
 - `Merge after <named check>`: as `Merge`, except one thing has to happen first and the report names it (a lint run with the new version, a companion bump, a configuration change, a migration step).
-- `Hold`: a breaking change is reached, a requirement is not met, a signal is red (a failure caused by the bump, a new publisher, a mismatched source, a stale lockfile), or the update belongs to a class the policy leaves to a person.
+- `Hold`: a breaking change is reached, a requirement is not met, a signal is red (a failure caused by the bump, a new publisher, a mismatched source, a lockfile change that moves a package backwards), or the update belongs to a class the policy leaves to a person.
 - `Insufficient signal`: the changelog for the range could not be found, or nothing that ran exercises the package, so the review cannot say; the report names what would supply the signal.
 
 Default policy, which the repository's own instructions override:
@@ -102,7 +103,7 @@ Default policy, which the repository's own instructions override:
 5. A `0.x` minor and any major get the breaking-change table from Step 4. Majors of a framework, a language runtime, a base-image OS or database image, and Action majors that change inputs are `Hold` for a person, even with green CI.
 6. A new publisher, a registry source that does not match the repository, a release younger than the repository's cooldown, or a newly added install script is `Hold`.
 7. A git SHA or branch pin is not a released version. A hand-made bump that introduces one where a tag exists is `Hold` until the tag is used; a bot bump from one SHA to another is reviewed from its commit list and is `Insufficient signal` when the commits cannot be read.
-8. A lockfile that moved backwards relative to the default branch is `Hold`; the follow-up is a recreate.
+8. A package that the PR's own lockfile change (the three-dot diff) moves backwards is `Hold`; the follow-up is a recreate. A PR that conflicts with the default branch is `Merge after` the bot's rebase. A default branch that moved on after the PR branched is neither, because the merge keeps its versions.
 9. A digest-only image bump with the tag unchanged and a green build is `Merge`.
 10. A manual bump pins with `~>` at patch level (`~> 3.0.7`) or a caret range so later patches flow through the bot; an exact pin without a comment saying why is a follow-up.
 
@@ -149,7 +150,7 @@ Rules for the content: every upstream change carries the version it landed in an
 
 - [ ] Did I compute the version class myself, with `0.x` minors as majors and SHA or tag bumps as their own class?
 - [ ] Did I list every locked package that moved, not only the one in the title?
-- [ ] Is the lockfile ahead of, not behind, the default branch for every package?
+- [ ] Did I read the lockfile change from the three-dot diff, and does it move every package forward and merge without a conflict?
 - [ ] Did I read the whole changelog range from the source, not the bot's excerpt?
 - [ ] Does every kept upstream change carry its version and a `Reached` or `Not reached` with evidence?
 - [ ] Did requirement changes (engines, Ruby range, peers, runtime, base OS) get checked against what this repository runs?
