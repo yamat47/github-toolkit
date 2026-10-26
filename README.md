@@ -21,7 +21,7 @@ This repository is intentionally not listed in the public skill catalog (`gh ski
 ### Use an action
 
 ```yaml
-- uses: yamat47/github-toolkit/actions/<action-name>@v1.0.0
+- uses: yamat47/github-toolkit/actions/<action-name>@main
 ```
 
 ### Use a reusable workflow
@@ -29,10 +29,24 @@ This repository is intentionally not listed in the public skill catalog (`gh ski
 ```yaml
 jobs:
   example:
-    uses: yamat47/github-toolkit/.github/workflows/<workflow-name>.yml@v1.0.0
+    uses: yamat47/github-toolkit/.github/workflows/<workflow-name>.yml@main
 ```
 
-`@v1.0.0` pins an exact release; there are no floating tags such as `@v1`. `@main` follows the branch head for anyone who prefers to always get the latest. Dependabot in a consuming repository bumps exact pins to new releases automatically.
+### Reference actions and workflows at `@main`
+
+A consuming repository references every action and reusable workflow from here as `@main`, never as a tag or a SHA. Each upstream bump is reviewed once, in this repository, when Dependabot moves a pin in `actions/<name>/action.yml`. A consumer that pinned a release tag would receive that same bump again as a Dependabot pull request of its own, one per consumer, which is the churn these wrappers exist to remove. In exchange, `main` only takes changes that keep existing callers working; see Versioning and tags.
+
+zizmor's `unpinned-uses` audit treats a branch reference to a repository outside `actions/*` as unpinned. Allow this repository by reference in the consumer's `.github/zizmor.yml`:
+
+```yaml
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        yamat47/*: ref-pin
+```
+
+Dependabot skips a `@main` reference, so the consumer's `github-actions` entry needs no change. Skills are the exception: `gh skill install` resolves the latest release, and `gh skill update` moves between releases, so they still follow tags.
 
 ## Contents
 
@@ -104,27 +118,27 @@ Thin wrappers pin one upstream action to a full commit SHA and mirror its inputs
 Dependabot bumps every pin to each new upstream release.
 
 ```yaml
-- uses: yamat47/github-toolkit/actions/checkout@v1.0.0
+- uses: yamat47/github-toolkit/actions/checkout@main
   with:
     fetch-depth: 0
 
-- uses: yamat47/github-toolkit/actions/setup-ruby@v1.0.0
+- uses: yamat47/github-toolkit/actions/setup-ruby@main
   with:
     working-directory: application
     bundler-cache: true
 
-- uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@v1.0.0
+- uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@main
   with:
     node-version: 24
     package-json-file: application/package.json
     cache-dependency-path: application/pnpm-lock.yaml
     working-directory: application
 
-- uses: yamat47/github-toolkit/actions/setup-playwright-chromium@v1.0.0
+- uses: yamat47/github-toolkit/actions/setup-playwright-chromium@main
   with:
     working-directory: application
 
-- uses: yamat47/github-toolkit/actions/undercover@v1.0.0
+- uses: yamat47/github-toolkit/actions/undercover@main
   if: github.event_name == 'pull_request'
   with:
     working-directory: application
@@ -150,7 +164,7 @@ permissions:
   pull-requests: write
 jobs:
   update:
-    uses: yamat47/github-toolkit/.github/workflows/update-skills.yml@v1.2.0
+    uses: yamat47/github-toolkit/.github/workflows/update-skills.yml@main
 ```
 
 Before the first run, enable "Allow GitHub Actions to create and approve pull requests" under Settings > Actions > General in the consuming repository; without it `gh pr create` is refused. Pull requests opened with the default `github.token` do not trigger the consumer's own CI, so pass a GitHub App token (or a personal access token) as `secrets: { token: ... }` when the checks on the update PR matter. The token also needs read access to every source repository the skills come from.
@@ -207,21 +221,22 @@ To vendor a skill from another repository instead, run `tools/vendor-skill.sh OW
 3. Mirror upstream inputs and outputs by name so the wrapper is a drop-in replacement. Composite inputs are strings; quote defaults such as `"true"`.
 4. Add an end-to-end job to `.github/workflows/ci.yml` that runs the action with `uses: ./actions/<name>`. actionlint then also checks that every input the job passes exists. Put any sample project or recorded output the job needs under `tests/fixtures/`.
 5. A recipe that chains other actions pins the upstream actions directly rather than using `./actions/<name>`: a relative `uses:` inside a composite action resolves against the caller's workspace, and an exact-tag self-reference cannot exist before the tag does.
-6. Run `make lint`, add a row to the Actions table above, then cut a release.
+6. Run `make lint` and add a row to the Actions table above. Consumers reference `@main`, so the action is in use as soon as the pull request merges; a change to an existing action must keep its current callers working (see Versioning and tags).
 
 ### Adding a reusable workflow
 
 1. Create `.github/workflows/<name>.yml` with `on: workflow_call` and declare `inputs`, `secrets`, and `outputs` there. Files must sit directly in `.github/workflows/`; subdirectories are not supported.
-2. Callers reference it from a job, not a step: `uses: yamat47/github-toolkit/.github/workflows/<name>.yml@v1.0.0`.
+2. Callers reference it from a job, not a step: `uses: yamat47/github-toolkit/.github/workflows/<name>.yml@main`.
 3. Pin any actions it uses to full commit SHAs. Dependabot already watches this directory.
-4. Run `make lint-workflows`, add a row to the Reusable workflows table above, then cut a release.
+4. Run `make lint-workflows` and add a row to the Reusable workflows table above. As with actions, the workflow is in use once the pull request merges.
 
 ### Versioning and tags
 
-Skills, actions, and workflows share one version line and are released together.
+Skills, actions, and workflows share one version line and are released together. Only skills resolve it: `gh skill install` picks the latest GitHub release and `gh skill update` moves between releases. Actions and reusable workflows are consumed at `@main` (see Usage), so for them a tag records what shipped when and nothing waits for it.
 
-- Versions are semantic version git tags with a matching GitHub release: `v1.0.0`, `v1.1.0`, `v1.1.1`. The release is what `gh skill install` resolves by default and is the audit trail of what shipped when; actions and workflows resolve the tag itself.
-- **Exact tags only. There is deliberately no floating `v1` or `v1.0` tag.** Tags are immutable evidence of a release, so nothing is ever force-moved. Consumers pin `@vX.Y.Z` and let Dependabot bump it, or use `@main` to follow the tip. Bump the major for a breaking change to any skill, action, or workflow.
+- Versions are semantic version git tags with a matching GitHub release: `v1.0.0`, `v1.1.0`, `v1.1.1`.
+- **Exact tags only. There is deliberately no floating `v1` or `v1.0` tag.** Tags are immutable evidence of a release, so nothing is ever force-moved.
+- Because consumers run `main`, a change to an action or reusable workflow keeps every existing caller working: no input or output is renamed or removed, no default changes, and behaviour a caller relies on stays. A change that cannot meet this ships as a new action or workflow under a new name, and the old one stays until no consumer references it. Bump the major when a skill changes in a way its readers must adapt to.
 - Releases are created with `gh release create`, never with `gh skill publish`. The latter also adds the `agent-skills` topic, which lists this repository in the public skill catalog.
 
 To release version `X.Y.Z` from `main`:

@@ -54,8 +54,13 @@ The `create-pr` and `writing-conventions` skills in this repository carry the sa
   (`.github/dependabot.yml`) bumps those pins. Never pin to a floating tag inside this repo.
 - Versions are exact semver git tags shared by skills, actions, and workflows (`v1.2.3`), each with a
   GitHub release. Decided 2026-09-12: no floating `v1` / `v1.0` tags, ever. Tags are an immutable
-  release record and are never force-moved. Do not suggest adding a moving major tag; consumers pin
-  exact versions (Dependabot bumps them) or use `@main`.
+  release record and are never force-moved. Do not suggest adding a moving major tag.
+- Decided 2026-10-27: consumers reference actions and reusable workflows at `@main`, never at a tag
+  or a SHA, so an upstream bump is reviewed once here instead of once per consumer (README,
+  "Reference actions and workflows at `@main`"). Releases exist for `gh skill install`. Every change
+  to an action or workflow on `main` therefore keeps existing callers working; a breaking change
+  ships under a new name and the old one stays until no consumer uses it. Do not suggest that a
+  consumer pin a version.
 - `tests/fixtures/installed-skills` is a frozen fixture: a skill installed from an old release so CI
   can prove `update-skills` detects an update. Never refresh it or edit its `SKILL.md` metadata.
 - Never commit secrets, personal data, or machine-specific paths.
