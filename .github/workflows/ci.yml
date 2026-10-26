@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Lint workflows, actions, and skills
         run: make lint
 
@@ -31,6 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: gh skill publish --dry-run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -42,6 +46,8 @@ jobs:
     steps:
       # The wrapper cannot check itself out, so bootstrap with upstream first.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Check out again through the wrapper
         id: wrapped
         uses: ./actions/checkout
@@ -64,6 +70,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - id: ruby
         uses: ./actions/setup-ruby
         with:
@@ -81,6 +89,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - id: node
         uses: ./actions/setup-node
         with:
@@ -98,6 +108,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - id: pnpm
         uses: ./actions/setup-pnpm
         with:
@@ -115,6 +127,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: mkdir -p cache-smoke && date > cache-smoke/stamp
       - id: cache
         uses: ./actions/cache
@@ -136,6 +150,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: mkdir -p artifact-smoke && echo "$GITHUB_SHA" > artifact-smoke/sha.txt
       - id: upload
         uses: ./actions/upload-artifact
@@ -161,6 +177,8 @@ jobs:
       artifact-name: ${{ steps.name.outputs.name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: mkdir -p pages-smoke && echo "<!doctype html><title>$GITHUB_SHA</title>" > pages-smoke/index.html
       - id: name
         run: echo "name=pages-smoke-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
@@ -194,6 +212,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - id: deploy
         uses: ./actions/deploy-pages
         with:
@@ -213,6 +233,8 @@ jobs:
         working-directory: tests/fixtures/pnpm-playwright
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - id: node
         uses: ./actions/setup-node-with-pnpm
         with:
@@ -244,6 +266,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # Each run replays a recorded undercover log instead of running the gem,
       # which keeps the job free of a Ruby project while still exercising the
       # status detection, the problem matcher and the path rewriting. The
