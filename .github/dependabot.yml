@@ -1,4 +1,6 @@
-# Keeps every SHA-pinned action reference on its latest release.
+# Keeps every SHA-pinned action reference on its latest release. A release
+# waits seven days before it is proposed, so a poisoned one has time to be
+# caught; consumers follow @main, so this is the only cooldown they get.
 #   "/"          -> .github/workflows/*.yml (this repo's own CI and reusable workflows)
 #   "/actions/*" -> actions/<name>/action.yml (the wrapper actions distributed from here)
 version: 2
@@ -12,3 +14,5 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    cooldown:
+      default-days: 7
