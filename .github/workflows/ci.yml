@@ -16,7 +16,8 @@ concurrency:
 # Every action under actions/ has an end-to-end job here. Besides proving the
 # action runs, `uses: ./actions/<name>` lets actionlint check the inputs each
 # job passes against the action's declared inputs (see `make lint-workflows`).
-# The deploy-pages job is the exception: it is skipped by default (see its job).
+# The deploy-pages and create-github-app-token jobs are the exceptions: they
+# are skipped by default (see each job).
 jobs:
   lint:
     name: Lint (same checks as `make lint`)
@@ -148,15 +149,19 @@ jobs:
   test-upload-artifact-action:
     name: actions/upload-artifact wrapper end-to-end
     runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.name.outputs.name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: mkdir -p artifact-smoke && echo "$GITHUB_SHA" > artifact-smoke/sha.txt
+      - id: name
+        run: echo "name=artifact-smoke-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - id: upload
         uses: ./actions/upload-artifact
         with:
-          name: artifact-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ steps.name.outputs.name }}
           path: artifact-smoke
           retention-days: 1
       - name: Assert the outputs are set
@@ -169,6 +174,27 @@ jobs:
           test -n "$ARTIFACT_ID"
           test -n "$ARTIFACT_URL"
           test -n "$ARTIFACT_DIGEST"
+
+  test-download-artifact-action:
+    name: actions/download-artifact wrapper end-to-end
+    needs: test-upload-artifact-action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: download
+        uses: ./actions/download-artifact
+        with:
+          name: ${{ needs.test-upload-artifact-action.outputs.artifact-name }}
+          path: ${{ runner.temp }}/artifact-smoke
+      - name: Assert the uploaded file came back unchanged and the output is set
+        env:
+          DOWNLOAD_PATH: ${{ steps.download.outputs.download-path }}
+        run: |
+          set -eux
+          test "$DOWNLOAD_PATH" = "$RUNNER_TEMP/artifact-smoke"
+          test "$(cat "$DOWNLOAD_PATH/sha.txt")" = "$GITHUB_SHA"
 
   test-upload-pages-artifact-action:
     name: actions/upload-pages-artifact wrapper end-to-end
@@ -224,6 +250,51 @@ jobs:
         run: |
           set -eux
           test -n "$PAGE_URL"
+
+  # The app and its private key are not part of the repository, so the job is
+  # skipped unless the repository variable APP_TOKEN_E2E is "true" and the
+  # secrets APP_TOKEN_E2E_CLIENT_ID and APP_TOKEN_E2E_PRIVATE_KEY are set for an
+  # app installed on this repository; actionlint still checks the inputs and
+  # outputs against the wrapper either way.
+  test-create-github-app-token-action:
+    name: actions/create-github-app-token wrapper end-to-end (only when APP_TOKEN_E2E is set)
+    if: vars.APP_TOKEN_E2E == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: token
+        uses: ./actions/create-github-app-token
+        with:
+          client-id: ${{ secrets.APP_TOKEN_E2E_CLIENT_ID }}
+          private-key: ${{ secrets.APP_TOKEN_E2E_PRIVATE_KEY }}
+          permission-metadata: read
+      - name: Assert the token reads this repository and the outputs are set
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          INSTALLATION_ID: ${{ steps.token.outputs.installation-id }}
+          APP_SLUG: ${{ steps.token.outputs.app-slug }}
+        run: |
+          set -eux
+          test -n "$INSTALLATION_ID"
+          test -n "$APP_SLUG"
+          test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .full_name)" = "$GITHUB_REPOSITORY"
+
+  test-zizmor-action:
+    name: actions/zizmor wrapper end-to-end (audits this repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The audit itself is the assertion: a finding in this repository's
+      # workflows or actions fails the job. Annotations instead of SARIF, so
+      # the job needs no security-events permission.
+      - uses: ./actions/zizmor
+        with:
+          advanced-security: "false"
+          annotations: "true"
 
   test-pnpm-and-playwright-recipes:
     name: setup-node-with-pnpm + setup-playwright-chromium end-to-end

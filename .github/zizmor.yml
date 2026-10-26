@@ -1,0 +1,5 @@
+rules:
+  # actionlint 1.7.12 rejects the `$/` form this rule asks for ("ref is
+  # missing"), so local actions stay `./`.
+  self-repository:
+    disable: true
