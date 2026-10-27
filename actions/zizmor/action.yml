@@ -1,0 +1,73 @@
+name: zizmor
+description: >-
+  Thin wrapper around zizmorcore/zizmor-action pinned to a full commit SHA.
+  Consumers reference this repository once and receive upstream updates
+  whenever the pin here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror zizmorcore/zizmor-action v0.7 exactly (names, defaults,
+# descriptions abridged). See https://github.com/zizmorcore/zizmor-action.
+# A composite action silently drops inputs it does not declare, so every
+# upstream input is listed even when this repository never uses it.
+inputs:
+  inputs:
+    description: Whitespace-separated inputs to pass to zizmor.
+    default: "."
+  collect:
+    description: "Collection mode: all, default, workflows, actions, or dependabot."
+    default: default
+  online-audits:
+    description: Whether to run online audits.
+    default: "true"
+  persona:
+    description: "Auditing persona: regular, pedantic, or auditor."
+    default: regular
+  min-severity:
+    description: "Minimum severity to report: unknown, informational, low, medium, or high."
+  min-confidence:
+    description: "Minimum confidence to report: unknown, low, medium, or high."
+  version:
+    description: Exact X.Y.Z version of zizmor, or latest (the newest release this action knows about).
+    default: latest
+  token:
+    description: GitHub API token for online audits.
+    default: ${{ github.token }}
+  advanced-security:
+    description: Upload the results as SARIF to the repository's security tab. The job then needs security-events write.
+    default: "true"
+  color:
+    description: Whether zizmor should colorize its CLI output.
+    default: "true"
+  annotations:
+    description: Emit GitHub annotations for the findings. Requires advanced-security false.
+    default: "false"
+  config:
+    description: Path to a zizmor configuration file.
+  fail-on-no-inputs:
+    description: Fail when zizmor collects no inputs. false warns instead (zizmor 1.21.0 and later).
+    default: "true"
+
+outputs:
+  output-file:
+    description: Path of the SARIF results. Set only when advanced-security is true.
+    value: ${{ steps.zizmor.outputs.output-file }}
+
+runs:
+  using: composite
+  steps:
+    - id: zizmor
+      uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+      with:
+        inputs: ${{ inputs.inputs }}
+        collect: ${{ inputs.collect }}
+        online-audits: ${{ inputs.online-audits }}
+        persona: ${{ inputs.persona }}
+        min-severity: ${{ inputs.min-severity }}
+        min-confidence: ${{ inputs.min-confidence }}
+        version: ${{ inputs.version }}
+        token: ${{ inputs.token }}
+        advanced-security: ${{ inputs.advanced-security }}
+        color: ${{ inputs.color }}
+        annotations: ${{ inputs.annotations }}
+        config: ${{ inputs.config }}
+        fail-on-no-inputs: ${{ inputs.fail-on-no-inputs }}

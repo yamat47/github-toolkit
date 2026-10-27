@@ -1,0 +1,59 @@
+name: Download a Build Artifact
+description: >-
+  Thin wrapper around actions/download-artifact pinned to a full commit SHA.
+  Consumers reference this repository once and receive upstream updates
+  whenever the pin here moves (Dependabot keeps it on the latest release).
+author: yamat47
+
+# Inputs mirror actions/download-artifact v8 exactly (names, defaults,
+# descriptions abridged). See https://github.com/actions/download-artifact.
+# A composite action silently drops inputs it does not declare, so every
+# upstream input is listed even when this repository never uses it.
+inputs:
+  name:
+    description: Name of the artifact to download. Unset downloads every artifact of the run.
+  artifact-ids:
+    description: Comma-separated IDs of the artifacts to download. Either this or name, not both.
+  path:
+    description: Destination path. Supports basic tilde expansion. Defaults to $GITHUB_WORKSPACE.
+  pattern:
+    description: Glob pattern matching the artifacts to download. Ignored when name is set.
+  merge-multiple:
+    description: When several artifacts match, extract them all into path instead of one directory per artifact.
+    default: "false"
+  github-token:
+    description: Token for downloading from another repository or another workflow run.
+  repository:
+    description: owner/name of the repository to download from when github-token is set.
+    default: ${{ github.repository }}
+  run-id:
+    description: ID of the workflow run to download from when github-token is set.
+    default: ${{ github.run_id }}
+  skip-decompress:
+    description: Keep the downloaded artifact as is instead of extracting it.
+    default: "false"
+  digest-mismatch:
+    description: "Behavior when the digest does not match: ignore, info, warn, or error."
+    default: error
+
+outputs:
+  download-path:
+    description: Absolute path where the artifact was downloaded.
+    value: ${{ steps.download.outputs.download-path }}
+
+runs:
+  using: composite
+  steps:
+    - id: download
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: ${{ inputs.name }}
+        artifact-ids: ${{ inputs.artifact-ids }}
+        path: ${{ inputs.path }}
+        pattern: ${{ inputs.pattern }}
+        merge-multiple: ${{ inputs.merge-multiple }}
+        github-token: ${{ inputs.github-token }}
+        repository: ${{ inputs.repository }}
+        run-id: ${{ inputs.run-id }}
+        skip-decompress: ${{ inputs.skip-decompress }}
+        digest-mismatch: ${{ inputs.digest-mismatch }}
