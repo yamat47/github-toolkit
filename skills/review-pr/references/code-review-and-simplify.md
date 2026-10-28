@@ -38,7 +38,7 @@ When the diff touches authentication, authorization, secrets, or request parsing
 
 `/simplify` rewrites whatever tree it runs in, so it never runs in the target's working tree. It runs in a throwaway worktree at the target's head, and the diff it leaves there is its proposal.
 
-Skip this part when no changed file is code (documentation, configuration, lock files, and workflow YAML only), when the caller says it will run `/simplify` itself (`create-pr` does), or when the harness has no `/simplify` or no way to run a subagent in another directory.
+Skip this part when no changed file is code (documentation, configuration, lock files, and workflow YAML only), or when the harness has no `/simplify` or no way to run a subagent in another directory.
 
 1. Create the copy. `DIR` is a new directory outside the repository.
 

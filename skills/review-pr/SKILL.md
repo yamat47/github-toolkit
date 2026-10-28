@@ -31,7 +31,7 @@ Run each `gh` and `git` command as its own Bash call so permission rules can mat
 2. Read the repository's own rules: `CLAUDE.md`, `AGENTS.md`, every file under `.claude/rules/` whose `paths` match a changed file, the PR template, and the linter configuration. These outrank everything this skill or the knowledge skills say. When the repository has decided against a toolkit rule, the toolkit rule is not a finding.
 3. List every changed file, including configuration, CI, generated files, and lock files. Classify each one with the routing table in [references/routing.md](references/routing.md) and load the knowledge skills it names, if they are installed. A file whose purpose cannot be explained from the diff is itself a finding.
 4. Read the surrounding code, not only the hunks: the callers of a changed method, the other consumers of a changed enum or endpoint, sibling files that solve the same problem. Most verified findings come from this step.
-5. Start the two readers, in the background, as [references/code-review-and-simplify.md](references/code-review-and-simplify.md) describes: `/code-review` on the same target at the effort level the file picks from the changed files, and `/simplify` in a copy of the target. Do not read their output before Step 4. Steps 2 and 3 produce your own candidate list first; with theirs already on the table, those steps would turn into a check of someone else's list. Skip a reader the harness does not have, or `/simplify` when the caller says it will run it itself, and note the skip for the Verdict.
+5. Start the two readers, in the background, as [references/code-review-and-simplify.md](references/code-review-and-simplify.md) describes: `/code-review` on the same target at the effort level the file picks from the changed files, and `/simplify` in a copy of the target. Do not read their output before Step 4. Steps 2 and 3 produce your own candidate list first; with theirs already on the table, those steps would turn into a check of someone else's list. Skip a reader the harness does not have, and note the skip for the Verdict.
 
 When the caller (`review-feedback`) has already read the PR text and the rules and loaded the knowledge skills, do not read or load them again; start at item 4.
 
@@ -76,12 +76,11 @@ Say when someone else should look too: a change to a shared schema, a CI workflo
 The report is read-only, and the skill stops when it is printed. This is the order for whoever acts on it.
 
 1. Decide what to take. Must is always taken. A Should is fixed or answered with a reason before merge. Nits, Questions, and the simplification findings are the author's choice. This skill does not make the choice; `create-pr` asks the user for it.
-2. Fix what was taken.
-3. Then simplify: run `/simplify` once on the whole diff from the base branch, not on the fixes alone. It comes after the fixes because it does not look for bugs, and a bug it has tidied reads as intended. It writes without asking, so read its diff and revert a hunk that changes behaviour. The simplification findings in the report are a preview of what it will do.
-4. Then run the project's checks and tests. This is what catches a simplification that changed behaviour.
-5. Run this skill again only when step 2 changed a design or a schema. The checks cover the simplification.
+2. Fix what was taken, correctness first and simplifications last. The simplification findings were derived from the code before the fixes, so a hunk on a line the fixes rewrote is re-read against the fixed code rather than applied as printed. Nobody runs `/simplify` on the tree: it already ran in the copy, and its proposal is in the report.
+3. Then run the project's checks and tests. This is what catches a simplification that changed behaviour.
+4. Run this skill again only when step 2 changed a design or a schema. The checks cover the simplification.
 
-`create-pr` runs this order itself when it calls this skill.
+`create-pr` follows this order when it calls this skill.
 
 ## Output
 
