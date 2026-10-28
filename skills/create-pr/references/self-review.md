@@ -1,6 +1,6 @@
 # Self-review rubric
 
-Used by Step 3 of `create-pr` only when the `review-pr` skill is not installed. The reviewing agent receives the repository path, the diff range, and this file, and nothing else about the change.
+Used by Step 2 of `create-pr` only when the `review-pr` skill is not installed. The reviewing agent receives the repository path, the diff range, and this file, and nothing else about the change.
 
 ## How to review
 
