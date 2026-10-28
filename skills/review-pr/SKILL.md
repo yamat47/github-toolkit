@@ -73,12 +73,13 @@ Say when someone else should look too: a change to a shared schema, a CI workflo
 
 ## After the report
 
-The report is read-only; this is the order for whoever acts on it.
+The report is read-only, and the skill stops when it is printed. This is the order for whoever acts on it.
 
-1. Fix every Must, and every Should that is fixed rather than explained. Correctness comes first because `/simplify` tidies whatever it is given, and a bug that has been tidied reads as intended.
-2. Then simplify: apply the simplification findings, or run `/simplify` once on the tree. It writes without asking, so run it on a committed tree and read its diff before anything else; revert a hunk that changes behaviour.
-3. Then run the project's checks and tests. This is what catches a simplification that changed behaviour.
-4. Run this skill again only when step 1 changed a design or a schema. The checks cover the simplification.
+1. Decide what to take. Must is always taken. A Should is fixed or answered with a reason before merge. Nits, Questions, and the simplification findings are the author's choice. This skill does not make the choice; `create-pr` asks the user for it.
+2. Fix what was taken.
+3. Then simplify: run `/simplify` once on the whole diff from the base branch, not on the fixes alone. It comes after the fixes because it does not look for bugs, and a bug it has tidied reads as intended. It writes without asking, so read its diff and revert a hunk that changes behaviour. The simplification findings in the report are a preview of what it will do.
+4. Then run the project's checks and tests. This is what catches a simplification that changed behaviour.
+5. Run this skill again only when step 2 changed a design or a schema. The checks cover the simplification.
 
 `create-pr` runs this order itself when it calls this skill.
 

@@ -1,12 +1,12 @@
 ---
 name: create-pr
-description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Has the change reviewed by a separate agent with no session context (the review-pr skill) and fixes what that review finds, then simplifies it once (Claude Code's /simplify), detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
+description: Take the working tree from uncommitted changes to an open draft pull request in one run that stops only once, to ask which review findings to take. Has the change reviewed by a separate agent with no session context (the review-pr skill, unless it already ran this session), fixes every Must and the findings the user chooses, then simplifies the whole diff from the base branch once (Claude Code's /simplify), detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
 license: MIT
 ---
 
 # Create a pull request
 
-Run every step from detecting changes to opening the pull request in one pass. Do not stop midway and do not ask the user for confirmation. End by printing the PR URL.
+Run every step from detecting changes to opening the pull request in one pass. Stop once, in Step 2, to ask the user which review findings to take. Ask nothing else: not the branch name, not the commit split, not the PR title or body. Those are decided by the rules in this skill. End by printing the PR URL.
 
 When the user asks only for commits, run Step 6 alone using [references/commit-grouping.md](references/commit-grouping.md).
 
@@ -36,22 +36,24 @@ Uncommitted changes (staged, unstaged, and untracked) are all in scope. The rang
 
 ### Step 2: Have the change reviewed by a separate agent
 
+When `review-pr` already ran on this range in this session and the user has acted on its report, go to Step 3. Otherwise run it now.
+
 Have the diff reviewed by an agent that starts with none of this session's context, so the review is not steered by the reasoning that produced the code. In Claude Code, spawn a subagent with the Agent tool. Its whole instruction is four things: the repository path, the range from Step 1, "run the `review-pr` skill on this range and print its report", and "skip the `/simplify` pass; the caller runs it". Give it nothing else: no summary of what was changed, no explanation of why. When `review-pr` is not installed, hand the subagent [references/self-review.md](references/self-review.md) instead and ask for the same report format.
 
 Then act on the report:
 
-- Fix every Must.
-- Fix a Should when the fix is clear and stays within the change's scope. Otherwise carry it to the PR body under "where to look".
-- Answer each Question from what you know about the change. If the current code is right, leave it. If it is wrong, fix it. If only the user can decide, carry the question to "where to look".
-- Leave Nits unless the fix is a one-liner.
+- Fix every Must without asking.
+- Show the user the Should, Nit, Question, and Follow-ups sections as the report printed them, and ask which items to take. This is the one question this skill asks; in Claude Code use the AskUserQuestion tool when it is available, otherwise print the sections and wait for the answer. Do not pre-select or summarise the items: the user reads the report, not a digest of it.
+- Fix the items the user takes. A Question the user answers is settled as they say; a Question only the user can decide and did not decide goes to the PR body under "where to look".
+- A Should the user does not take is carried to "where to look" in one sentence. A Nit the user does not take is dropped.
 - Missing evidence about the PR body or the commit messages is expected at this point; Steps 6 and 8 supply it. Carry any other item to "where to look".
-- Record each Follow-up as a TODO at the spot or an issue before Step 6.
+- Record each Follow-up the user takes as a TODO at the spot or an issue before Step 6.
 
 Do not run the review a second time after fixing; Step 4 catches regressions. Keep a note of what was fixed so the commit messages in Step 6 can say why.
 
-### Step 3: Simplify the change once
+### Step 3: Simplify the whole diff once
 
-If `/simplify` (Claude Code's built-in skill that removes duplication, dead code, and needless complexity from the changed code) has not already been run on these changes in this session, run it now, once, on the range from Step 1. Do not loop on it. Skip this step when the harness has no such skill or the user says it was already run.
+Run `/simplify` (Claude Code's built-in skill that removes duplication, dead code, and needless complexity from the changed code) once, on the whole range from Step 1: every commit since the base branch plus the uncommitted changes, not only the code written in this session. This skill is the only place `/simplify` runs, so do not skip it because it ran earlier, and do not loop on it. Skip it only when the harness has no such skill.
 
 Simplify after the review and its fixes, not before: `/simplify` tidies whatever it is given and does not look for bugs, so a bug that is still in the code comes out shorter and reads as intended. It writes to the working tree without asking, so read its diff before going on and revert a hunk that changes behaviour. Step 4 then runs the checks against the simplified code.
 
