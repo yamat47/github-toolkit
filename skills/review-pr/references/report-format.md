@@ -9,6 +9,7 @@ The report is Markdown printed to the terminal. The eight headings below always 
 
 <Approve | Approve with follow-ups | Request changes>. <One or two sentences saying why, naming the finding that decided it.>
 <If a routed knowledge skill was not installed: "Reviewed <area> without <skill>; that part relies on general knowledge.">
+<If a reader did not run: "Reviewed without /code-review" or "without /simplify", with the reason in a few words, so the author can run it before merge.>
 <If someone else should look: "A <kind of owner> should review <what>, because <reason>.">
 
 ## Must

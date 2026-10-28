@@ -25,6 +25,8 @@ Missing items go under "Missing evidence". The list is about what the author sho
 - The repository's `CLAUDE.md`, rules, or a linked decision explicitly chooses the pattern you would flag.
 - The problem exists outside the diff and the change does not make it worse. At most a follow-up.
 - The finding is a preference (a knowledge skill marks preferences as such) and the codebase consistently does otherwise. Preferences become Nits at most.
+- A `/code-review` finding fails any rule above. It is a candidate like your own, with no credit for its source; what it states as a bug still has to be read in the code.
+- A `/simplify` hunk changes behaviour for an input you can name, or touches lines a Must or Should will rewrite. [code-review-and-simplify.md](code-review-and-simplify.md) has the rest of its rules.
 - The finding is a "might" or "could" without a concrete scenario. When you can name the scenario (the input, the order of events, the data that would have to exist), keep it as a Question that states the scenario and what you could not confirm; a concrete "does this break when X?" is what a reviewer would ask. Drop it only when no scenario can be named.
 
 ## Severity
@@ -36,7 +38,7 @@ Missing items go under "Missing evidence". The list is about what the author sho
 | Nit | Style, wording, and taste; deferrable, and the report says it is deferrable |
 | Question | The intent is unclear, or the correctness depends on a fact only the author knows; state the options and a recommendation |
 
-Calibration rules: a Should does not become a Must because there are many of them; a Must is not softened because the PR is large; a preference is never a Must. When the same problem appears in several places, it is one finding at the severity of the worst instance, listing every location.
+Calibration rules: a simplification is a Should when it replaces new code with a mechanism the codebase already has or removes code shown to be dead, and a Nit otherwise; a Should does not become a Must because there are many of them; a Must is not softened because the PR is large; a preference is never a Must. When the same problem appears in several places, it is one finding at the severity of the worst instance, listing every location.
 
 ## Before printing
 
