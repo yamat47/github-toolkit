@@ -10,84 +10,27 @@ Take a screenshot of each state that a reviewer would otherwise have to reproduc
 
 A change nothing shows (a Worker route, a migration, a script, docs) has no pictures. Say so in Step 8 only if the PR template asks for them.
 
-## 2. Keep the pictures where GitHub can show them
+## 2. Attach them with gh
 
-GitHub shows an image in a pull request body only from a URL it can fetch. A local path shows nothing, and `gh` cannot attach a file the way the web form does. So the pictures go into the repository itself, on one branch that holds nothing else and that nobody merges: `pr-images`. The branch is history the repository's default branch never carries.
+`gh` 2.99.0 and later upload a local image or video with the repeatable `--attach` flag on `gh pr create`, `gh pr edit` and `gh pr comment` (and `gh issue create`); the file goes to GitHub's own attachment store, as a drop into the web form would. Nothing is committed anywhere. Uploading needs push access to the repository; up to 50 files go in one command.
 
-Work in a separate worktree so the checkout and its index stay as they are:
-
-```bash
-git fetch origin pr-images
-```
-
-If the fetch found the branch:
-
-```bash
-git worktree add --detach .tmp/pr-images origin/pr-images
-```
-
-If it did not (the first pull request with pictures in this repository):
-
-```bash
-git worktree add --orphan -b pr-images .tmp/pr-images
-```
-
-Copy the screenshots into a folder named after the branch, with short names that say what they show:
-
-```bash
-mkdir -p .tmp/pr-images/<branch>
-```
-
-```bash
-cp <saved screenshot> .tmp/pr-images/<branch>/weight-month.png
-```
-
-Commit and push from inside the worktree (one commit, a plain subject; the message needs no Why):
-
-```bash
-git -C .tmp/pr-images add <branch>
-```
-
-```bash
-git -C .tmp/pr-images commit -m "Screenshots for <branch>"
-```
-
-```bash
-git -C .tmp/pr-images push origin HEAD:pr-images
-```
-
-Note the commit:
-
-```bash
-git -C .tmp/pr-images rev-parse HEAD
-```
-
-Then remove the worktree; the branch stays on the remote:
-
-```bash
-git worktree remove .tmp/pr-images
-```
-
-The URL of a picture is pinned to that commit, so later pushes to `pr-images` never move it:
-
-```
-https://github.com/<owner>/<repo>/blob/<commit>/<branch>/weight-month.png?raw=true
-```
-
-GitHub serves it to anyone who can read the repository, so it works for a private repository too. A screenshot that is a JPEG keeps its `.jpg` name.
-
-## 3. Put them in the body
-
-Phone screenshots are tall, so write them as `<img>` with a width and the caption as `alt`, several on one line so they sit side by side:
+Write the body with the pictures as ordinary Markdown images, each with its caption as the alt text and the file by a path relative to the body file's directory:
 
 ```markdown
-<img src="https://github.com/<owner>/<repo>/blob/<commit>/<branch>/weight-month.png?raw=true" width="280" alt="The Weight tab in the last month, with the goal line"> <img src="…/weight-week.png?raw=true" width="280" alt="The same week, the period switched to W">
+## What it looks like
+
+![The Weight tab in the last month, with the goal line](./weight-month.png)
+![The same week, the period switched to W](./weight-week.png)
 ```
 
-Each caption says what the reviewer is looking at and what to notice, in one sentence; the pictures are the evidence the "what was verified" sentence of the body points at, not decoration. A desktop screenshot takes the plain `![caption](url)` form at its own width.
+Keep the screenshots beside the body file, named for what they show, and pass each one with `--attach`; a reference in the body to an attached file is rewritten to the uploaded asset, and an attached file the body does not mention is appended at the end:
 
-If the repository has a convention of its own for where pull request images live (a `docs/screenshots/` folder it keeps on purpose, an issue that hosts them), follow it instead of the `pr-images` branch.
+```bash
+gh pr create --draft --base main --head "<BRANCH>" --title "<title>" --body-file .tmp/pr/body.md --attach .tmp/pr/weight-month.png --attach .tmp/pr/weight-week.png
+```
 
-## 4. When the branch gets heavy
+For an existing pull request, `gh pr edit <number>` takes the same flags. Alt text can also follow the path after `#` (`--attach './weight-month.png#The Weight tab in the last month'`) when the body does not reference the file; a Markdown reference in the body keeps the alt text written there. A video renders as a player and has no alt text.
 
-`pr-images` only grows. When it weighs on a clone, the owner deletes the folders of merged pull requests whose pictures no longer matter and force-pushes the branch; the pinned URLs in those old pull requests stop showing, which is the accepted cost. Never force-push it for any other reason.
+A `gh` without `--attach` is older than 2.99.0: upgrade it. Until then the pictures cannot go into the body from the command line, and the body says what was looked at in words.
+
+Each caption says what the reviewer is looking at and what to notice, in one sentence; the pictures are the evidence the "what was verified" sentence of the body points at, not decoration.
