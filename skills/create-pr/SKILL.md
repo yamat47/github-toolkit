@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Simplifies the change once (Claude Code's /simplify), has it reviewed by a separate agent with no session context (the review-pr skill) and fixes what that review finds, detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
+description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Simplifies the change once (Claude Code's /simplify), has it reviewed by a separate agent with no session context (the review-pr skill) and fixes what that review finds, detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), looks at a visible change running and attaches screenshots of its states to the PR body with gh --attach, splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
 license: MIT
 ---
 
@@ -83,6 +83,8 @@ If the changed code has no corresponding tests, add them in the project's existi
 
 If the project defines no checks (a fresh repository, for example), skip this step.
 
+When the change is something a person sees (a page, a screen, a component, a command's output), the checks are not the whole verification: look at it running and take a screenshot of each state the change adds or alters, as [references/evidence.md](references/evidence.md) describes. Keep each screenshot's path with a one-line caption for Step 8.
+
 ### Step 5: Check the current branch and existing PRs
 
 ```bash
@@ -128,7 +130,7 @@ If the push fails, read the error and try to resolve it (rebase when the remote 
 
 If `.github/pull_request_template.md` exists, read it. **Keep its headings in the same order with the same names.** Do not add or reorder headings. Delete a heading that has nothing under it instead of writing "none".
 
-Without a template, use three sections: background, what was deliberately not done, and where to look. Delete any that has nothing to say.
+Without a template, use four sections: background, what it looks like, what was deliberately not done, and where to look. Delete any that has nothing to say; "what it looks like" exists only when Step 4 took screenshots.
 
 #### 8b. Collect the commit information
 
@@ -156,6 +158,7 @@ What to include and what to leave out come from the conventions named above. In 
 Include:
 
 - **Background:** the issue link (`Refs #N` / `Fixes #N`) and one or two sentences of Why that the issue does not already state.
+- **What it looks like:** the screenshots from Step 4 as Markdown images, each with its caption as the alt text and its file by a path relative to the body file; `--attach` uploads them when the pull request is created ([references/evidence.md](references/evidence.md)). With a template, they go under the heading that speaks of the change's result, else under "where to look".
 - **Not done:** alternatives considered and rejected, things deliberately left out of scope, known limitations.
 - **Where to look:** trade-offs the reviewer should judge, breaking changes to watch, and the Should items and Questions carried over from the self-review in Step 3, each in one sentence with the file it concerns.
 
@@ -163,7 +166,7 @@ Leave out:
 
 - Implementation detail visible in the diff, lists of added files, descriptions of added classes and methods.
 - Component specs or usage examples (the code shows them).
-- Screenshots referenced by local file path (not viewable on GitHub).
+- A screenshot referenced by a local path without attaching it (nothing shows on GitHub); every referenced file is passed with `--attach` (references/evidence.md).
 - Pasted CI results (the status checks show them).
 - Per-commit summaries (the commit list shows them).
 - Self-evident test plan checklists.
@@ -182,11 +185,13 @@ Only when Step 4 left failures unresolved, add this under "where to look":
 
 #### 8e. Create the pull request
 
-Write the body to a file outside version control (for example `.tmp/pr-body.md` in an ignored directory), then:
+Write the body to a file outside version control (for example `.tmp/pr/body.md` in an ignored directory), with the screenshots beside it, then:
 
 ```bash
 gh pr create --draft --base main --head "<BRANCH>" --title "<title>" --body-file <body-file>
 ```
+
+With screenshots, add `--attach <file>` for each one the body references (references/evidence.md, step 2).
 
 **Always create the PR as a draft.** Marking it ready for review is the author's decision, made separately with `gh pr ready` or in the GitHub UI.
 
