@@ -67,7 +67,7 @@ A status run ends here: report the base (or that there is none), the files that 
    - `"editing": "code"` (the page shows the system read-only and says it is kept in code);
    - `"lastChange": {"by": <git config user.name>, "at": <now, ISO-8601 UTC>, "via": "GitHub · <owner/name>@<short sha>", "note": <one line, at most 280 characters: the subjects of the commits since the base that touched root while they fit, then "and N more"; with no base, "First publish from code">}`.
    Keep `title`, `namespace`, `libraries`, `createdOnFiles`, `groups`, `assetGroups` and the rest as read. Do not pass `capabilities` or `contract` on the publish.
-3. Read the index again right before publishing (a person may have saved meanwhile) and redo the two changes on that text.
+3. Read the artifact itself (Artifact `read` with `url` alone) and then the index again right before publishing: the tool refuses a publish to an artifact this session has not read in full, and a person may have saved meanwhile. Redo the two changes on the index as read.
 4. One Artifact `publish`:
 
    ```json
@@ -77,13 +77,14 @@ A status run ends here: report the base (or that there is none), the files that 
      "file_path": "<dir>/project/design-system.json",
      "files": {
        "project/components/bundle.js": "project/components/bundle.js",
+       "project/components/index.d.ts": { "from": "project/components/index.d.ts", "contentType": "text/plain" },
        "project/components/Row/preview.html": "project/components/Row/preview.html",
        "project/components/Old/preview.html": null
      }
    }
    ```
 
-   `files` holds every path from Step 3: a sent file maps to the same path under `<dir>`, a removal to `null`. More than 254 paths: send the files in several publishes without the index, and the index with the last batch.
+   `files` holds every path from Step 3: a sent file maps to the same path under `<dir>`, a removal to `null`. The tool serves a file by its extension and knows none for `.d.ts`, so `index.d.ts` goes with `contentType` `text/plain`, as the type lists it. More than 254 paths: send the files in several publishes without the index, and the index with the last batch.
 5. A refusal because a newer version exists: read the index again, redo the two changes, publish once more. A second refusal: tell the user and stop.
 
 ## Step 5: Read it back
