@@ -31,6 +31,6 @@ gh pr create --draft --base main --head "<BRANCH>" --title "<title>" --body-file
 
 For an existing pull request, `gh pr edit <number>` takes the same flags. Alt text can also follow the path after `#` (`--attach './weight-month.png#The Weight tab in the last month'`) when the body does not reference the file; a Markdown reference in the body keeps the alt text written there. A video renders as a player and has no alt text.
 
-A `gh` without `--attach` is older than 2.99.0: upgrade it. Until then the pictures cannot go into the body from the command line, and the body says what was looked at in words.
+A `gh` without `--attach` is older than 2.99.0. Do not upgrade it: that is an install on the host, which a repository's instructions may forbid, and this skill asks for no confirmation. Open the pull request without the pictures, say in the body what was looked at in words, and tell the user the `gh` version so they can upgrade it themselves.
 
 Each caption says what the reviewer is looking at and what to notice, in one sentence; the pictures are the evidence the "what was verified" sentence of the body points at, not decoration.

@@ -25,6 +25,6 @@ Before committing, commenting, or opening a pull request:
 - Does the comment explain why the obvious approach was not taken, rather than what the code does?
 - Does the test name read as a specification of behavior, with input and outcome?
 - Does the commit subject use the imperative and does the body contain only the Why (or nothing, when the Why is obvious)?
-- Is the pull request written about what changes for the user, with only background, things deliberately not done, and places to look at?
+- Is the pull request written about what changes for the user, with only background, what it looks like (only when there are screenshots), things deliberately not done, and places to look at?
 - Is every section that has nothing to say deleted rather than filled with "none"?
 - Is there no trailer, footer, link, or signature saying an AI took part? The work is the author's own.
