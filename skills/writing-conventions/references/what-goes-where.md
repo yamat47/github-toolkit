@@ -37,7 +37,7 @@ Follow Takuto Wada's division: code says **How**, test code says **What**, the c
 ## Pull requests: a letter to the reviewer
 
 - Make the subject of the text what the user experiences and what changes for them. Do not make class names, column names, or file names the subject.
-- Write only three things: background (the Why not already in the issue), what was deliberately not done and why, and where the reviewer should look. Delete any of the three sections that has nothing to say.
+- Write only four things: background (the Why not already in the issue), what it looks like (a screenshot of each state the change adds or alters, only when the change is something a person sees), what was deliberately not done and why, and where the reviewer should look. Delete any of the four sections that has nothing to say.
 - Do not write per-commit summaries, lists of changed files, CI results, or self-evident check lists. GitHub shows those.
 - As a rule, structural changes and behavioral changes go in separate pull requests.
 - No "Generated with ..." footer, session link, or AI signature anywhere in the title or body. The same applies to issues and review comments.
