@@ -16,7 +16,7 @@ curl -sS -H "CF-Access-Client-Id: $ZEBRA_ACCESS_CLIENT_ID" https://zebra.yamat47
 
 Every request carries the access token, as described under Access below. `GET /` returns how the API is used: the endpoints, the order to call them in, how search treats a term, and the edition it holds. Read it once before the first query of a session and follow it. This skill does not repeat it, so the usage page is the one place that changes when the API does.
 
-The order it describes is short: search for one word, which returns the rulebook's own terms for it and the articles whose text uses it, then read the article it leads to, with its rulings and the articles it refers to. A second word narrows a search that finds too much. Read a long article to its end: the penalty and the rulings that decide a case are often there.
+The usage page ends with a map of the rulebook: the heading of every article, under its section and its rule. Choose the section a question belongs to from those headings and read that section whole, with its rulings; then follow what the text refers to. Search is for finding where a word is used, such as the ruling on a particular situation. A request costs little, so read widely before answering: the penalty, the exception or the ruling that decides a case is often in the article next to the one you came for.
 
 ## Access
 
@@ -42,6 +42,6 @@ A redirect to a login page (302) or a 401 means the request carried no valid tok
 - Responses are Markdown in Japanese; `?format=json` returns JSON. Keep the rulebook's own terms when you answer, in whatever language the question was asked.
 - Cite the article or ruling behind every statement (`7-3-8`, `A. R. 7-3-8-Ⅳ`). A reader checks the rulebook by number.
 - The text belongs to the association and may not be reproduced without its approval. Quote the passage an answer needs and no more. Do not copy articles into a file, a commit, an issue, a pull request or any public place.
-- An everyday word is often not the rulebook's word: 延長戦 is 超過節 there, and ビデオ判定 is インスタント リプレー. The API fills in the common ones and says when it has, in the result. Such a mapping is the site's and not the rulebook's, so cite the article it leads to and not the mapping.
-- When a search finds nothing, try the other words the question implies, and a shorter one, before concluding anything. A near term the API offers can be about something else, so read what it points to before relying on it.
-- Say that the rulebook does not use a word only after those have failed. The rules of other bodies (the NCAA, the NFL) differ in places; do not fill a gap from them without saying which rules you are quoting.
+- An everyday word is often not the rulebook's word: 延長戦 is 超過節 there, and ビデオ判定 is インスタント リプレー. Find the rulebook's word in the headings of the map. The search fills in a few such words and says when it has; that mapping is the site's and not the rulebook's, so cite the article it leads to and not the mapping.
+- Say that the rulebook is silent on something only when no heading of the map fits and searches for the words the question implies have found nothing. A near term the API offers can be about something else, so read what it points to before relying on it.
+- The rules of other bodies (the NCAA, the NFL) differ in places; do not fill a gap from them without saying which rules you are quoting.
