@@ -16,7 +16,7 @@ curl -sS -H "CF-Access-Client-Id: $ZEBRA_ACCESS_CLIENT_ID" https://zebra.yamat47
 
 Every request carries the access token, as described under Access below. `GET /` returns how the API is used: the endpoints, the order to call them in, how search treats a term, and the edition it holds. Read it once before the first query of a session and follow it. This skill does not repeat it, so the usage page is the one place that changes when the API does.
 
-The order it describes is short: search for one word, which returns the rulebook's own terms for it and the articles whose text uses it, then read the article it leads to, with its rulings and the articles it refers to.
+The order it describes is short: search for one word, which returns the rulebook's own terms for it and the articles whose text uses it, then read the article it leads to, with its rulings and the articles it refers to. A second word narrows a search that finds too much. Read a long article to its end: the penalty and the rulings that decide a case are often there.
 
 ## Access
 
@@ -27,6 +27,8 @@ The client id is not a secret. It is in the environment variable `ZEBRA_ACCESS_C
 ```sh
 curl -sS -H "CF-Access-Client-Id: $ZEBRA_ACCESS_CLIENT_ID" 'https://zebra.yamat47.workers.dev/rules/7-3-8'
 ```
+
+Send that header on every request, the searches too: a request without it is answered by Access with a page of HTML and not by the API. Ask curl for the status as well (`-w '\n%{http_code}\n'`), so that such an answer is not read as a result.
 
 The client secret reaches the request in one of two ways.
 
