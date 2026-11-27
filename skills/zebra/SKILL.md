@@ -28,7 +28,7 @@ The client id is not a secret. It is in the environment variable `ZEBRA_ACCESS_C
 curl -sS -H "CF-Access-Client-Id: $ZEBRA_ACCESS_CLIENT_ID" 'https://zebra.yamat47.workers.dev/rules/7-3-8'
 ```
 
-Send that header on every request, the searches too: a request without it is answered by Access with a page of HTML and not by the API. Ask curl for the status as well (`-w '\n%{http_code}\n'`), so that such an answer is not read as a result.
+Send that header on every request, the searches too: a request without it is answered by Access with a page of HTML and not by the API. Ask curl for the status as well (`-w '\n%{http_code}\n'`), so that such an answer is not read as a result. Japanese in a query has to be URL-encoded: `curl -sS -G --data-urlencode 'q=超過節' ...` does it, and a raw query is answered with an empty 400.
 
 The client secret reaches the request in one of two ways.
 
