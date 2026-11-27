@@ -11,25 +11,29 @@ zebra is an HTTP API over the official rules of American football in Japan: the 
 ## Read the usage page first
 
 ```sh
-curl -sS https://zebra.yamat47.workers.dev/
+curl -sS -H "CF-Access-Client-Id: $ZEBRA_ACCESS_CLIENT_ID" https://zebra.yamat47.workers.dev/
 ```
 
-`GET /` returns how the API is used: the endpoints, the order to call them in, how search treats a term, and the edition it holds. Read it once before the first query of a session and follow it. This skill does not repeat it, so the usage page is the one place that changes when the API does.
+Every request carries the access token, as described under Access below. `GET /` returns how the API is used: the endpoints, the order to call them in, how search treats a term, and the edition it holds. Read it once before the first query of a session and follow it. This skill does not repeat it, so the usage page is the one place that changes when the API does.
 
 The order it describes is short: look the word up in the rulebook's own vocabulary, search the text for one term, read the article with its rulings.
 
 ## Access
 
-The API sits behind Cloudflare Access and answers only a request that carries the owner's service token.
+The API sits behind Cloudflare Access and answers only a request that carries the owner's service token. The token is a client id and a client secret, sent in two headers.
 
-- In a Claude Code cloud session whose environment holds the token as a network secret for `zebra.yamat47.workers.dev`, send the request as it is. The session's proxy adds the header, and the token never appears in the session.
-- Anywhere else, the token is in the environment variable `ZEBRA_TOKEN` and goes in one header:
+The client id is not a secret. It is in the environment variable `ZEBRA_ACCESS_CLIENT_ID`, and every request sends it:
 
-  ```sh
-  curl -sS -H "X-Zebra-Token: $ZEBRA_TOKEN" 'https://zebra.yamat47.workers.dev/rules/7-3-8'
-  ```
+```sh
+curl -sS -H "CF-Access-Client-Id: $ZEBRA_ACCESS_CLIENT_ID" 'https://zebra.yamat47.workers.dev/rules/7-3-8'
+```
 
-A redirect to a login page (302) or a 401 means the request carried no valid token. Say so and stop: do not print the token, do not ask for it in chat, and do not present an answer from memory as if it came from the rulebook.
+The client secret reaches the request in one of two ways.
+
+- In a Claude Code cloud session whose environment holds it as a network secret for `zebra.yamat47.workers.dev`, the command above is complete. The session's proxy adds the `CF-Access-Client-Secret` header, and the secret never appears in the session.
+- Anywhere else, the secret is in the environment variable `ZEBRA_ACCESS_CLIENT_SECRET`, and the request adds `-H "CF-Access-Client-Secret: $ZEBRA_ACCESS_CLIENT_SECRET"`.
+
+A redirect to a login page (302) or a 401 means the request carried no valid token. Say so and stop: do not print the secret, do not ask for it in chat, and do not present an answer from memory as if it came from the rulebook.
 
 ## Using what comes back
 
